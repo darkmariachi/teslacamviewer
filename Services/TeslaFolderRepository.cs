@@ -12,6 +12,9 @@ namespace teslacamviewer.Services
     public interface ITeslaFolderRepository 
     {
         IEnumerable<TeslaFolder> GetTeslaFolders();
+        TeslaFolder GetTeslaFolder(string folderName);
+        Task<byte[]> GetTeslaClip(string folderName, string teslaClip);
+        Task<byte[]> GetThumbnail(string folderName);
     }
     public class TeslaFolderRepository : ITeslaFolderRepository
     {
@@ -20,6 +23,27 @@ namespace teslacamviewer.Services
         {
             var directories = Directory.GetDirectories(RootFolder);
             return BuildTeslaFolders(directories);
+        }
+
+        public TeslaFolder GetTeslaFolder(string folderName) {
+            return BuildTeslaFolder($"{RootFolder}\\{folderName}");
+        }
+
+        public async Task<byte[]> GetTeslaClip(string folderName, string teslaClip) {
+            using (FileStream stream = File.OpenRead($"{RootFolder}\\{folderName}\\{teslaClip}")) {
+                var result = new byte[stream.Length];
+                await stream.ReadAsync(result, 0, (int)stream.Length);
+                return result;
+            }
+        }
+
+        public async Task<byte[]> GetThumbnail(string folderName) {
+            using (FileStream stream = File.OpenRead($"{RootFolder}\\{folderName}\\thumb.png")) {
+                var result = new byte[stream.Length];
+                await stream.ReadAsync(result, 0, (int)stream.Length);
+                return result;
+            }
+            
         }
 
         private IEnumerable<TeslaFolder> BuildTeslaFolders(string[] directories) {
@@ -35,6 +59,7 @@ namespace teslacamviewer.Services
                         Name = TeslaFolderHelper.TeslaFolderPathParser(directory),
                         TeslaEvent = BuildTeslaEvent(directory),
                         TeslaClips = BuildTeslaClips(directory),
+                        Thumbnail = TeslaFolderHelper.ContainsThumbnail(files, directory),
                     };
                 }
                 return null;

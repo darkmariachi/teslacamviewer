@@ -13,6 +13,7 @@ namespace teslacamviewer.Contracts
                      dest.TeslaClipsGroupedByDate = dest.TeslaClips.GroupBy(tc => tc.DateTime);
                 });
 
+            CreateMap<TeslaEvent, TeslaEventContract>();
             CreateMap<TeslaClip, TeslaClipContract>();
         }
     }

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using teslacamviewer.Contracts;
@@ -24,7 +25,33 @@ namespace teslacamviewer.Controllers
         [HttpGet]
         public IActionResult GetTeslaFolders() {
             var x = _mapper.Map<List<TeslaFolderContract>>(_teslaFolderRepository.GetTeslaFolders());
+            x.ForEach(tf => tf.TeslaClips = null);
             return Ok(x);
+        }
+
+        [HttpGet, Route("{folderName}")]
+        public IActionResult GetTeslaFolder(string folderName) {
+            return Ok(_mapper.Map<TeslaFolderContract>(_teslaFolderRepository.GetTeslaFolder(folderName)));
+        }
+
+        [HttpGet, Route("{folderName}/{fileName}")]
+        public async Task<IActionResult> GetTeslaClip(string folderName, string fileName) {
+            var stream = await _teslaFolderRepository.GetTeslaClip(folderName, fileName);
+
+            if(stream == null)
+                return NotFound(); // returns a NotFoundResult with Status404NotFound response.
+
+            return File(stream, "application/octet-stream", fileName); // returns a FileStreamResult
+        }
+
+        [HttpGet, Route("get/thumbnail/{folderName}")]
+        public async Task<IActionResult> GetThumbnail(string folderName) {
+            var stream = await _teslaFolderRepository.GetThumbnail(folderName);
+            
+            if (stream == null)
+                return NotFound();
+
+            return File(stream, "application/octet-stream", "thumb.png");
         }
     }
 }

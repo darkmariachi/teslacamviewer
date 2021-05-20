@@ -17,6 +17,10 @@ namespace teslacamviewer.Helpers
             return files.Contains($"{directory}\\event.json");
         }
 
+        public static bool ContainsThumbnail(List<string> files, string directory) {
+            return files.Contains($"{directory}\\thumb.png");
+        }
+
         public static string TeslaClipPathParser(string fullPath) {
             var strings = fullPath.Split("\\");
             return strings[strings.Length - 1];
