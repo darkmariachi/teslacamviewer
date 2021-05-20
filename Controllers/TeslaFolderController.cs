@@ -35,13 +35,8 @@ namespace teslacamviewer.Controllers
         }
 
         [HttpGet, Route("{folderName}/{fileName}")]
-        public async Task<IActionResult> GetTeslaClip(string folderName, string fileName) {
-            var stream = await _teslaFolderRepository.GetTeslaClip(folderName, fileName);
-
-            if(stream == null)
-                return NotFound(); // returns a NotFoundResult with Status404NotFound response.
-
-            return File(stream, "application/octet-stream", fileName); // returns a FileStreamResult
+        public IActionResult GetTeslaClip(string folderName, string fileName) {
+            return PhysicalFile($@"E:\TeslaCam\{folderName}\{fileName}", "application/octet-stream", fileName, enableRangeProcessing: true); // returns a FileStreamResult
         }
 
         [HttpGet, Route("get/thumbnail/{folderName}")]

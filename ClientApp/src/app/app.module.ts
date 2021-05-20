@@ -10,6 +10,11 @@ import { HomeComponent } from './home/home.component';
 import { TeslaFolderListComponent } from './tesla-folder-list/tesla-folder-list.component';
 import { TeslaFolderViewComponent } from './tesla-folder-view/tesla-folder-view.component';
 
+import {VgCoreModule} from 'videogular2/compiled/core';
+import {VgControlsModule} from 'videogular2/compiled/controls';
+import {VgOverlayPlayModule} from 'videogular2/compiled/overlay-play';
+import {VgBufferingModule} from 'videogular2/compiled/buffering';
+
 @NgModule({
   declarations: [
     AppComponent,
@@ -25,7 +30,11 @@ import { TeslaFolderViewComponent } from './tesla-folder-view/tesla-folder-view.
     RouterModule.forRoot([
       { path: '', component: TeslaFolderListComponent, pathMatch: 'full' },
       { path: 'folders/:folderName', component: TeslaFolderViewComponent}
-    ])
+    ]),
+    VgCoreModule,
+    VgControlsModule,
+    VgOverlayPlayModule,
+    VgBufferingModule
   ],
   providers: [],
   bootstrap: [AppComponent]

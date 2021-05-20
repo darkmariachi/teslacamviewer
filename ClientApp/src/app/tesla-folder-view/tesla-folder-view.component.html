@@ -1,16 +1,30 @@
 <div *ngIf="!loading">
     <h1>{{teslaFolder.teslaEvent.timeStamp | date}}</h1>
     <hr/>
-    <h2>Clips</h2>
+    <div class="">
+        <h2>Clips</h2>
+    </div>
     <div *ngFor="let teslaClipsGrouped of teslaFolder.teslaClipsGroupedByDate" class="card mb-4">
-        <div class="card-header"><h2>{{teslaClipsGrouped[0].dateTime | date:"hh:mm:ss"}}</h2></div>
-        <table class="table table-striped">
+        <div class="card-header"><h2>{{teslaClipsGrouped[0].dateTime | date:"hh:mm:ss a"}}</h2></div>
+        <div class="card-body">
+            <div class="row">
+                <div *ngFor="let tc of teslaClipsGrouped" class="col-3">
+                    <vg-player>
+                        <video style="height: 300px;" [vgMedia]="media" #media preload="auto" controls>
+                            <source [src]="'/api/teslafolder/' + teslaFolder.name + '/' + tc.name" type="video/mp4">
+                        </video>
+                    </vg-player>
+                </div>
+            </div>
+            
+        </div>
+        <!-- <table class="table table-striped">
             <tbody>
                 <tr *ngFor="let tc of teslaClipsGrouped">
                     <td>{{tc.name}}</td>
                     <td>{{getEnumName(tc.side)}}</td>
                 </tr>
             </tbody>
-        </table>
+        </table> -->
     </div>
 </div>
