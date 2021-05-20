@@ -1,0 +1,27 @@
+<div class="card">
+    <div class="card-header"><h1>Folders</h1></div>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Reason Trigger</th>
+                <th>Number of Clips</th>
+                <th>Date</th>
+                <th>City</th>
+                <th>Location</th>
+                <th>Thumbnail</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr *ngFor="let tf of (teslaFolders$ | async)">
+                <td><a [routerLink]="['folders/' + tf.name]">{{tf.name}}</a></td>
+                <td>{{(tf.teslaEvent.reason).replaceAll("_", " ")}}</td>
+                <td>{{tf.teslaClipsGroupedByDate.length}}</td>
+                <td>{{tf.teslaEvent.timeStamp | date}}</td>
+                <td>{{tf.teslaEvent.city}}</td>
+                <td>Add Map Here</td>
+                <td><img style="height: 100px;" [src]="tf.thumbnail ? 'api/teslafolder/get/thumbnail/'+tf.name : 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/No_image_3x4.svg/1200px-No_image_3x4.svg.png'"/></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
