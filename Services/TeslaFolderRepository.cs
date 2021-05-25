@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using teslacamviewer.Helpers;
 using teslacamviewer.Models;
@@ -18,7 +19,12 @@ namespace teslacamviewer.Services
     }
     public class TeslaFolderRepository : ITeslaFolderRepository
     {
-        private readonly string RootFolder = "E:\\TeslaCam";
+        private readonly IConfiguration _config;
+        public TeslaFolderRepository(IConfiguration config) {
+            _config = config;
+            RootFolder = _config["rootFolder"];
+        }
+        private readonly string RootFolder;
         public IEnumerable<TeslaFolder> GetTeslaFolders()
         {
             var directories = Directory.GetDirectories(RootFolder);
@@ -26,11 +32,11 @@ namespace teslacamviewer.Services
         }
 
         public TeslaFolder GetTeslaFolder(string folderName) {
-            return BuildTeslaFolder($"{RootFolder}\\{folderName}");
+            return BuildTeslaFolder(Path.Combine(RootFolder, folderName));
         }
 
         public async Task<byte[]> GetTeslaClip(string folderName, string teslaClip) {
-            using (FileStream stream = File.OpenRead($"{RootFolder}\\{folderName}\\{teslaClip}")) {
+            using (FileStream stream = File.OpenRead(Path.Combine(RootFolder, folderName, teslaClip))) {
                 var result = new byte[stream.Length];
                 await stream.ReadAsync(result, 0, (int)stream.Length);
                 return result;
@@ -38,7 +44,7 @@ namespace teslacamviewer.Services
         }
 
         public async Task<byte[]> GetThumbnail(string folderName) {
-            using (FileStream stream = File.OpenRead($"{RootFolder}\\{folderName}\\thumb.png")) {
+            using (FileStream stream = File.OpenRead(Path.Combine(RootFolder, folderName, "thumb.png"))) {
                 var result = new byte[stream.Length];
                 await stream.ReadAsync(result, 0, (int)stream.Length);
                 return result;
@@ -66,7 +72,7 @@ namespace teslacamviewer.Services
         }
 
         private TeslaEvent BuildTeslaEvent(string directory) {
-            using (StreamReader r = new StreamReader($"{directory}\\event.json")) 
+            using (StreamReader r = new StreamReader(Path.Combine(directory, "event.json"))) 
             {
                 string json = r.ReadToEnd();
                 return JsonConvert.DeserializeObject<TeslaEvent>(json);

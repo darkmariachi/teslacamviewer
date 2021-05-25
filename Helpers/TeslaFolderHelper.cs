@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using teslacamviewer.Enums;
 using teslacamviewer.Models;
@@ -9,20 +10,21 @@ namespace teslacamviewer.Helpers
     public static class TeslaFolderHelper
     {
         public static string TeslaFolderPathParser(string fullPath) {
-            var strings = fullPath.Split("\\");
+            var x = Path.DirectorySeparatorChar;
+            var strings = fullPath.Split(Path.DirectorySeparatorChar);
             return strings[strings.Length - 1];
         }
 
         public static bool IsValidFolder(List<string> files, string directory) {
-            return files.Contains($"{directory}\\event.json");
+            return files.Contains(Path.Combine(directory, "event.json"));
         }
 
         public static bool ContainsThumbnail(List<string> files, string directory) {
-            return files.Contains($"{directory}\\thumb.png");
+            return files.Contains(Path.Combine(directory, "thumb.png"));
         }
 
         public static string TeslaClipPathParser(string fullPath) {
-            var strings = fullPath.Split("\\");
+            var strings = fullPath.Split(Path.DirectorySeparatorChar);
             return strings[strings.Length - 1];
         }
 

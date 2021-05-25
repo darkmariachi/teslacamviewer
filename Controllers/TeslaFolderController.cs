@@ -1,8 +1,10 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using teslacamviewer.Contracts;
 using teslacamviewer.Models;
 using teslacamviewer.Services;
@@ -15,11 +17,14 @@ namespace teslacamviewer.Controllers
     {
         private readonly ITeslaFolderRepository _teslaFolderRepository;
         private readonly IMapper _mapper;
+        private readonly IConfiguration _config;
         public TeslaFolderController(
             ITeslaFolderRepository teslaFolderRepository,
-            IMapper mapper) {
+            IMapper mapper,
+            IConfiguration config) {
             _teslaFolderRepository = teslaFolderRepository;
             _mapper = mapper;
+            _config = config;
         }
 
         [HttpGet]
@@ -36,7 +41,7 @@ namespace teslacamviewer.Controllers
 
         [HttpGet, Route("{folderName}/{fileName}")]
         public IActionResult GetTeslaClip(string folderName, string fileName) {
-            return PhysicalFile($@"E:\TeslaCam\{folderName}\{fileName}", "application/octet-stream", fileName, enableRangeProcessing: true); // returns a FileStreamResult
+            return PhysicalFile(Path.Combine(_config["rootFolder"], folderName, fileName), "application/octet-stream", fileName, enableRangeProcessing: true); // returns a FileStreamResult
         }
 
         [HttpGet, Route("get/thumbnail/{folderName}")]
