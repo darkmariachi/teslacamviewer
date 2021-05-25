@@ -5,6 +5,7 @@ import { TeslaFolder } from '../models/TeslaFolder';
 import { TeslaFolderService } from '../services/tesla-folder.service';
 import { catchError } from 'rxjs/operators';
 import { SideEnum } from '../enums/SideEnum';
+import { VgAPI } from 'videogular2/compiled/core';
 
 @Component({
   selector: 'app-tesla-folder-view',
@@ -20,7 +21,8 @@ export class TeslaFolderViewComponent implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
-    private teslaFolderService: TeslaFolderService) { }
+    private teslaFolderService: TeslaFolderService,
+    private vgApi: VgAPI) { }
 
   ngOnInit() {
     this.route.params.subscribe(params => {
@@ -38,6 +40,27 @@ export class TeslaFolderViewComponent implements OnInit {
 
   getEnumName(enumerator: SideEnum): string {
     return SideEnum[enumerator];
+  }
+
+  getMediaId(clipDate: string, side: SideEnum) {
+    return `${clipDate}${side}`
+  }
+
+  play (clipDate: string) {
+    const clips = [
+      this.getMediaId(clipDate, SideEnum.Back),
+      this.getMediaId(clipDate, SideEnum.Front),
+      this.getMediaId(clipDate, SideEnum.Left),
+      this.getMediaId(clipDate, SideEnum.Right)
+    ];
+    clips.forEach(c => {
+      const video = <HTMLVideoElement>document.getElementById(c);
+      if (video.paused) {
+        video.play();
+      } else {
+        video.pause();
+      }
+     });
   }
 
 }

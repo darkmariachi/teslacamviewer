@@ -5,12 +5,15 @@
         <h2>Clips</h2>
     </div>
     <div *ngFor="let teslaClipsGrouped of teslaFolder.teslaClipsGroupedByDate" class="card mb-4">
-        <div class="card-header"><h2>{{teslaClipsGrouped[0].dateTime | date:"hh:mm:ss a"}}</h2></div>
+        <div class="card-header">
+            <h2>{{teslaClipsGrouped[0].dateTime | date:"hh:mm:ss a"}}</h2>
+            <div class="right"><button class="btn btn-success" (click)="play(teslaClipsGrouped[0].dateTime)">Play</button></div>
+        </div>
         <div class="card-body">
             <div class="row">
                 <div *ngFor="let tc of teslaClipsGrouped" class="col-3">
                     <vg-player>
-                        <video style="height: 300px;" [vgMedia]="media" #media preload="auto" controls>
+                        <video [attr.id]="getMediaId(tc.dateTime, tc.side)" style="width: 100%;" [vgMedia]="media" #media preload="auto" controls>
                             <source [src]="'/api/teslafolder/' + teslaFolder.name + '/' + tc.name" type="video/mp4">
                         </video>
                     </vg-player>
