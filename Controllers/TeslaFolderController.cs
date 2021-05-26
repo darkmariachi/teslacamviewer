@@ -34,19 +34,19 @@ namespace teslacamviewer.Controllers
             return Ok(x);
         }
 
-        [HttpGet, Route("{folderName}")]
-        public IActionResult GetTeslaFolder(string folderName) {
-            return Ok(_mapper.Map<TeslaFolderContract>(_teslaFolderRepository.GetTeslaFolder(folderName)));
+        [HttpGet, Route("{folderType}/{folderName}")]
+        public IActionResult GetTeslaFolder(string folderType, string folderName) {
+            return Ok(_mapper.Map<TeslaFolderContract>(_teslaFolderRepository.GetTeslaFolder(folderName, folderType)));
         }
 
-        [HttpGet, Route("{folderName}/{fileName}")]
-        public IActionResult GetTeslaClip(string folderName, string fileName) {
-            return PhysicalFile(Path.Combine(_config["rootFolder"], folderName, fileName), "application/octet-stream", fileName, enableRangeProcessing: true); // returns a FileStreamResult
+        [HttpGet, Route("{folderType}/{folderName}/{fileName}")]
+        public IActionResult GetTeslaClip(string folderType, string folderName, string fileName) {
+            return PhysicalFile(Path.Combine(_config["rootFolder"], folderType, folderName, fileName), "application/octet-stream", fileName, enableRangeProcessing: true); // returns a FileStreamResult
         }
 
-        [HttpGet, Route("get/thumbnail/{folderName}")]
-        public async Task<IActionResult> GetThumbnail(string folderName) {
-            var stream = await _teslaFolderRepository.GetThumbnail(folderName);
+        [HttpGet, Route("get/thumbnail/{folderType}/{folderName}")]
+        public async Task<IActionResult> GetThumbnail(string folderType, string folderName) {
+            var stream = await _teslaFolderRepository.GetThumbnail(folderName, folderType);
             
             if (stream == null)
                 return NotFound();

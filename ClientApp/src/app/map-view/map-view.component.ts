@@ -19,11 +19,11 @@ export class MapViewComponent implements OnInit, AfterViewInit {
   constructor() { }
 
 
-  ngOnInit() {
+  ngAfterViewInit() {
     
   }
 
-  ngAfterViewInit() {
+  ngOnInit() {
     this.map = new ol.Map({
       target: this.id,
       layers: [

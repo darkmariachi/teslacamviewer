@@ -16,7 +16,7 @@ export class TeslaFolderService {
     return this.http.get<TeslaFolder[]>(`${this.apiEndpoint}`);
   }
 
-  getTeslaFolder(folderName: string): Observable<TeslaFolder> {
-    return this.http.get<TeslaFolder>(`${this.apiEndpoint}/${folderName}`);
+  getTeslaFolder(folderName: string, folderType: string): Observable<TeslaFolder> {
+    return this.http.get<TeslaFolder>(`${this.apiEndpoint}/${folderType}/${folderName}`);
   }
 }

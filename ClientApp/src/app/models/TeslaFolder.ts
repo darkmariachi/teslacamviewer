@@ -7,4 +7,5 @@ export class TeslaFolder {
     thumbnail: boolean;
     teslaEvent: TeslaEvent;
     teslaClipsGroupedByDate: TeslaClip[][];
+    folderType: string;
 }

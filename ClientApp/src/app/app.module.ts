@@ -32,7 +32,7 @@ import { MapViewComponent } from './map-view/map-view.component';
     FormsModule,
     RouterModule.forRoot([
       { path: '', component: TeslaFolderListComponent, pathMatch: 'full' },
-      { path: 'folders/:folderName', component: TeslaFolderViewComponent}
+      { path: 'folders/:folderType/:folderName', component: TeslaFolderViewComponent}
     ]),
     VgCoreModule,
     VgControlsModule,

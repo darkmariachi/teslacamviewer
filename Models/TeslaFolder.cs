@@ -9,5 +9,6 @@ namespace teslacamviewer.Models
         public TeslaEvent TeslaEvent {get;set;}
         public bool Thumbnail {get;set;}
         public IEnumerable<TeslaClip> TeslaClips {get;set;} = new List<TeslaClip>();
+        public string FolderType {get;set;}
     }
 }

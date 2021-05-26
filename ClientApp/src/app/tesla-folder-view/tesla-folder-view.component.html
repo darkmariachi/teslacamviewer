@@ -22,7 +22,7 @@
                 <div *ngFor="let tc of teslaClipsGrouped" class="col-3">
                     <vg-player>
                         <video [attr.id]="getMediaId(tc.dateTime, tc.side)" style="width: 100%;" [vgMedia]="media" #media preload="auto" controls>
-                            <source [src]="'/api/teslafolder/' + teslaFolder.name + '/' + tc.name" type="video/mp4">
+                            <source [src]="'/api/teslafolder/' +teslaFolder.folderType+ '/' + teslaFolder.name + '/' + tc.name" type="video/mp4">
                         </video>
                     </vg-player>
                 </div>

@@ -29,7 +29,8 @@ export class TeslaFolderViewComponent implements OnInit {
   ngOnInit() {
     this.route.params.subscribe(params => {
       const folderName = params['folderName'];
-      this.teslaFolderService.getTeslaFolder(folderName)
+      const folderType = params['folderType'];
+      this.teslaFolderService.getTeslaFolder(folderName, folderType)
       .subscribe(res => {
         this.teslaFolder = res;
         this.open(res.teslaClipsGroupedByDate[0]);

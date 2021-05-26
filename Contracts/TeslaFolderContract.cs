@@ -12,5 +12,6 @@ namespace teslacamviewer.Contracts
         public TeslaEventContract TeslaEvent {get;set;}
         public IEnumerable<TeslaClipContract> TeslaClips {get;set;}
         public IEnumerable<IGrouping<DateTime, TeslaClipContract>> TeslaClipsGroupedByDate {get;set;}
+        public string FolderType {get;set;}
     }
 }

@@ -13,13 +13,15 @@ namespace teslacamviewer.Services
     public interface ITeslaFolderRepository 
     {
         IEnumerable<TeslaFolder> GetTeslaFolders();
-        TeslaFolder GetTeslaFolder(string folderName);
-        Task<byte[]> GetTeslaClip(string folderName, string teslaClip);
-        Task<byte[]> GetThumbnail(string folderName);
+        TeslaFolder GetTeslaFolder(string folderName, string folderType);
+        Task<byte[]> GetTeslaClip(string folderName, string teslaClip, string folderType);
+        Task<byte[]> GetThumbnail(string folderName, string folderType);
     }
     public class TeslaFolderRepository : ITeslaFolderRepository
     {
         private readonly IConfiguration _config;
+        private const string SENTRY_CLIPS_FOLDER_TYPE = "SentryClips";
+        private const string SAVED_CLIPS_FOLDER_TYPE = "SentryClips";
         public TeslaFolderRepository(IConfiguration config) {
             _config = config;
             RootFolder = _config["rootFolder"];
@@ -27,24 +29,26 @@ namespace teslacamviewer.Services
         private readonly string RootFolder;
         public IEnumerable<TeslaFolder> GetTeslaFolders()
         {
-            var directories = Directory.GetDirectories(RootFolder);
-            return BuildTeslaFolders(directories);
+            var sentryDirectory = Directory.GetDirectories(Path.Join(RootFolder, SENTRY_CLIPS_FOLDER_TYPE));
+            var savedClipsDirectory = Directory.GetDirectories(Path.Join(RootFolder, SAVED_CLIPS_FOLDER_TYPE));
+            // var directories = Directory.GetDirectories(RootFolder);
+            return BuildTeslaFolders(sentryDirectory, SENTRY_CLIPS_FOLDER_TYPE).Concat(BuildTeslaFolders(savedClipsDirectory, SAVED_CLIPS_FOLDER_TYPE));
         }
 
-        public TeslaFolder GetTeslaFolder(string folderName) {
-            return BuildTeslaFolder(Path.Combine(RootFolder, folderName));
+        public TeslaFolder GetTeslaFolder(string folderName, string folderType) {
+            return BuildTeslaFolder(Path.Combine(RootFolder, folderType, folderName), folderType);
         }
 
-        public async Task<byte[]> GetTeslaClip(string folderName, string teslaClip) {
-            using (FileStream stream = File.OpenRead(Path.Combine(RootFolder, folderName, teslaClip))) {
+        public async Task<byte[]> GetTeslaClip(string folderName, string teslaClip, string folderType) {
+            using (FileStream stream = File.OpenRead(Path.Combine(RootFolder, folderType, folderName, teslaClip))) {
                 var result = new byte[stream.Length];
                 await stream.ReadAsync(result, 0, (int)stream.Length);
                 return result;
             }
         }
 
-        public async Task<byte[]> GetThumbnail(string folderName) {
-            using (FileStream stream = File.OpenRead(Path.Combine(RootFolder, folderName, "thumb.png"))) {
+        public async Task<byte[]> GetThumbnail(string folderName, string folderType) {
+            using (FileStream stream = File.OpenRead(Path.Combine(RootFolder, folderType, folderName, "thumb.png"))) {
                 var result = new byte[stream.Length];
                 await stream.ReadAsync(result, 0, (int)stream.Length);
                 return result;
@@ -52,11 +56,11 @@ namespace teslacamviewer.Services
             
         }
 
-        private IEnumerable<TeslaFolder> BuildTeslaFolders(string[] directories) {
-            return directories.Select(d => BuildTeslaFolder(d)).Where(t => t != null).ToList();
+        private IEnumerable<TeslaFolder> BuildTeslaFolders(string[] directories, string folderType) {
+            return directories.Select(d => BuildTeslaFolder(d, folderType)).Where(t => t != null).ToList();
         }
 
-        private TeslaFolder BuildTeslaFolder(string directory) {
+        private TeslaFolder BuildTeslaFolder(string directory, string folderType) {
                 var files = Directory.GetFiles(directory).ToList();
                 if (TeslaFolderHelper.IsValidFolder(files, directory)) {
                     return new TeslaFolder 
@@ -66,6 +70,7 @@ namespace teslacamviewer.Services
                         TeslaEvent = BuildTeslaEvent(directory),
                         TeslaClips = BuildTeslaClips(directory),
                         Thumbnail = TeslaFolderHelper.ContainsThumbnail(files, directory),
+                        FolderType = folderType
                     };
                 }
                 return null;
