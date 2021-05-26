@@ -1,4 +1,4 @@
-<div class="card">
+<div *ngIf="teslaFolders$ | async as teslaFolders; else loadingError" class="card">
     <div class="card-header"><h1>Folders</h1></div>
     <table class="table table-striped">
         <thead>
@@ -13,7 +13,7 @@
             </tr>
         </thead>
         <tbody>
-            <tr *ngFor="let tf of (teslaFolders$ | async)">
+            <tr *ngFor="let tf of teslaFolders">
                 <td><a [routerLink]="['folders/'+ tf.folderType + '/' + tf.name]">{{tf.name}}</a></td>
                 <td>{{(tf.teslaEvent.reason).replaceAll("_", " ")}}</td>
                 <td>{{tf.teslaClipsGroupedByDate.length}}</td>
@@ -25,3 +25,7 @@
         </tbody>
     </table>
 </div>
+
+<ng-template #loadingError>
+    {{error}}
+</ng-template>

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -29,6 +30,7 @@ namespace teslacamviewer.Services
         private readonly string RootFolder;
         public IEnumerable<TeslaFolder> GetTeslaFolders()
         {
+            ValidateFolders();
             var sentryDirectory = Directory.GetDirectories(Path.Join(RootFolder, SENTRY_CLIPS_FOLDER_TYPE));
             var savedClipsDirectory = Directory.GetDirectories(Path.Join(RootFolder, SAVED_CLIPS_FOLDER_TYPE));
             // var directories = Directory.GetDirectories(RootFolder);
@@ -99,6 +101,14 @@ namespace teslacamviewer.Services
                     Side = TeslaFolderHelper.TeslaClipSideParser(f)
                 });
 
+        }
+
+        private void ValidateFolders() {
+            if (!Directory.Exists(RootFolder) 
+            || !Directory.Exists(Path.Join(RootFolder, SENTRY_CLIPS_FOLDER_TYPE)) 
+            || !Directory.Exists(Path.Join(RootFolder, SAVED_CLIPS_FOLDER_TYPE))) {
+                throw new Exception("The provided root teslacam directory does not exist.");
+            }
         }
     }
 }

@@ -1,7 +1,8 @@
 import { Component, OnInit } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { TeslaFolder } from '../models/TeslaFolder';
 import { TeslaFolderService } from '../services/tesla-folder.service';
+import { catchError } from 'rxjs/operators';
 
 @Component({
   selector: 'app-tesla-folder-list',
@@ -11,10 +12,16 @@ import { TeslaFolderService } from '../services/tesla-folder.service';
 export class TeslaFolderListComponent implements OnInit {
 
   teslaFolders$: Observable<TeslaFolder[]>;
+  error:string;
   constructor(private teslaFolderService: TeslaFolderService) { }
 
   ngOnInit() {
-    this.teslaFolders$ = this.teslaFolderService.getTeslaFolders();
+    this.teslaFolders$ = this.teslaFolderService.getTeslaFolders()
+    .pipe(catchError((err) => {
+      console.log(err);
+      this.error = err.error;
+      return of;
+    }));
   }
 
 }
