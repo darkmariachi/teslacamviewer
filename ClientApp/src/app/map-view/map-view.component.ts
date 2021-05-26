@@ -1,9 +1,5 @@
 import { AfterViewInit, Component, Input, OnInit } from '@angular/core';
 import { TeslaEvent } from '../models/TeslaEvent';
-import Map from 'ol/Map';
-import { View } from 'ol';
-import TileLayer from 'ol/layer/Tile';
-import OSM from 'ol/source/OSM';
 declare var ol: any;
 
 @Component({

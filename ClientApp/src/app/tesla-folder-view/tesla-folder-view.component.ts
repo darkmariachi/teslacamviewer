@@ -3,9 +3,9 @@ import { ActivatedRoute } from '@angular/router';
 import { Observable, of, Subject } from 'rxjs';
 import { TeslaFolder } from '../models/TeslaFolder';
 import { TeslaFolderService } from '../services/tesla-folder.service';
-import { catchError } from 'rxjs/operators';
+
 import { SideEnum } from '../enums/SideEnum';
-import { VgAPI } from 'videogular2/compiled/core';
+import { TeslaClip } from '../models/TeslaClip';
 
 @Component({
   selector: 'app-tesla-folder-view',
@@ -18,11 +18,13 @@ export class TeslaFolderViewComponent implements OnInit {
   error = false;
   loading = true;
   loadingError$ = new Subject<boolean>();
+  currentlyOpenGroup: TeslaClip[];
+  playing = false;
 
   constructor(
     private route: ActivatedRoute,
     private teslaFolderService: TeslaFolderService,
-    private vgApi: VgAPI) { }
+    ) { }
 
   ngOnInit() {
     this.route.params.subscribe(params => {
@@ -30,6 +32,7 @@ export class TeslaFolderViewComponent implements OnInit {
       this.teslaFolderService.getTeslaFolder(folderName)
       .subscribe(res => {
         this.teslaFolder = res;
+        this.open(res.teslaClipsGroupedByDate[0]);
       }, (err) => {
         this.error = true;
       }, () => {
@@ -46,6 +49,19 @@ export class TeslaFolderViewComponent implements OnInit {
     return `${clipDate}${side}`
   }
 
+  open(group: TeslaClip[]) {
+    if (this.isCurrentlyOpen(group)) {
+      this.currentlyOpenGroup = null;
+      return;
+    }
+    this.currentlyOpenGroup = group;
+    this.playing = false;
+  }
+
+  isCurrentlyOpen(group: TeslaClip[]) {
+    return this.currentlyOpenGroup == group;
+  }
+
   play (clipDate: string) {
     const clips = [
       this.getMediaId(clipDate, SideEnum.Back),
@@ -57,8 +73,10 @@ export class TeslaFolderViewComponent implements OnInit {
       const video = <HTMLVideoElement>document.getElementById(c);
       if (video.paused) {
         video.play();
+        this.playing = true;
       } else {
         video.pause();
+        this.playing = false;
       }
      });
   }

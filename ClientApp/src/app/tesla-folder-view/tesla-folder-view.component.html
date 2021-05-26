@@ -6,10 +6,18 @@
     </div>
     <div *ngFor="let teslaClipsGrouped of teslaFolder.teslaClipsGroupedByDate" class="card mb-4">
         <div class="card-header">
-            <h2>{{teslaClipsGrouped[0].dateTime | date:"hh:mm:ss a"}}</h2>
-            <div class="right"><button class="btn btn-success" (click)="play(teslaClipsGrouped[0].dateTime)">Play</button></div>
+            <div class="d-flex">
+                <div class="mr-auto p-2"><h2>{{teslaClipsGrouped[0].dateTime | date:"hh:mm:ss a"}}</h2></div>
+                <div class="p-2">
+                    <button type="button" (click)="open(teslaClipsGrouped)" class="btn btn-outline-info">
+                        <span *ngIf="!isCurrentlyOpen(teslaClipsGrouped)">🔽</span>
+                        <span *ngIf="isCurrentlyOpen(teslaClipsGrouped)">🔼</span>
+                    </button>
+                </div>
+            </div>
+            
         </div>
-        <div class="card-body">
+        <div *ngIf="isCurrentlyOpen(teslaClipsGrouped)" class="card-body">
             <div class="row">
                 <div *ngFor="let tc of teslaClipsGrouped" class="col-3">
                     <vg-player>
@@ -19,15 +27,14 @@
                     </vg-player>
                 </div>
             </div>
-            
+            <div class="row mt-2">
+                <p class="text-center">
+                    <button class="btn btn-lg btn-outline-secondary" (click)="play(teslaClipsGrouped[0].dateTime)">
+                        <span *ngIf="!playing">▶ Play All</span>
+                        <span *ngIf="playing">⏸ Pause All</span>
+                    </button>
+                </p>
+            </div>
         </div>
-        <!-- <table class="table table-striped">
-            <tbody>
-                <tr *ngFor="let tc of teslaClipsGrouped">
-                    <td>{{tc.name}}</td>
-                    <td>{{getEnumName(tc.side)}}</td>
-                </tr>
-            </tbody>
-        </table> -->
     </div>
 </div>
