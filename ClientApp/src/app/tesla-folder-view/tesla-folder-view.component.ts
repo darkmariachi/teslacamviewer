@@ -21,6 +21,8 @@ export class TeslaFolderViewComponent implements OnInit {
   currentlyOpenGroup: TeslaClip[];
   playing = false;
 
+  private fullScreenClip: TeslaClip[];
+
   constructor(
     private route: ActivatedRoute,
     private teslaFolderService: TeslaFolderService,
@@ -63,15 +65,24 @@ export class TeslaFolderViewComponent implements OnInit {
     return this.currentlyOpenGroup == group;
   }
 
-  play (clipDate: string) {
-    const clips = [
-      this.getMediaId(clipDate, SideEnum.Back),
-      this.getMediaId(clipDate, SideEnum.Front),
-      this.getMediaId(clipDate, SideEnum.Left),
-      this.getMediaId(clipDate, SideEnum.Right)
-    ];
+  fastForward(clipDate: string, forward: boolean) {
+    const clips = this.getClips(clipDate);
+    let delta = 10
+    if (!forward) {
+      delta = -10;
+    }
     clips.forEach(c => {
-      const video = <HTMLVideoElement>document.getElementById(c);
+      const video = this.getHTMLVideoElement(c);
+      if (!video.paused) {
+        video.currentTime = video.currentTime + delta;
+      }
+    });
+  }
+
+  play (clipDate: string) {
+    const clips = this.getClips(clipDate);
+    clips.forEach(c => {
+      const video = this.getHTMLVideoElement(c);
       if (video.paused) {
         video.play();
         this.playing = true;
@@ -80,6 +91,28 @@ export class TeslaFolderViewComponent implements OnInit {
         this.playing = false;
       }
      });
+  }
+
+  fullscreen(teslaClipsGrouped: TeslaClip[]) {
+    if (!this.fullScreenClip) this.fullScreenClip = teslaClipsGrouped;
+    else this.fullScreenClip = null;
+  }
+
+  isFullscreen(teslaClipsGrouped: TeslaClip[]) {
+    return this.fullScreenClip == teslaClipsGrouped;
+  }
+
+  private getClips(clipDate: string) {
+    return [
+      this.getMediaId(clipDate, SideEnum.Back),
+      this.getMediaId(clipDate, SideEnum.Front),
+      this.getMediaId(clipDate, SideEnum.Left),
+      this.getMediaId(clipDate, SideEnum.Right)
+    ];
+  }
+
+  private getHTMLVideoElement(c: string): HTMLVideoElement {
+    return <HTMLVideoElement>document.getElementById(c);
   }
 
 }

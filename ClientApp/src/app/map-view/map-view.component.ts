@@ -1,17 +1,21 @@
-import { AfterViewInit, Component, Input, OnInit } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, Input, OnInit } from '@angular/core';
+import { Subject } from 'rxjs';
 import { TeslaEvent } from '../models/TeslaEvent';
 declare var ol: any;
 
 @Component({
   selector: 'map-view',
   templateUrl: './map-view.component.html',
-  styleUrls: ['./map-view.component.css']
+  styleUrls: ['./map-view.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 
 export class MapViewComponent implements OnInit, AfterViewInit {
 
   @Input() teslaEvent: TeslaEvent;
   @Input() id: string;
+  @Input() afterInit: boolean;
+  @Input() zoom: number;
 
   map: any;
   
@@ -20,10 +24,16 @@ export class MapViewComponent implements OnInit, AfterViewInit {
 
 
   ngAfterViewInit() {
-    
+    // if(this.afterInit)
+    this.initMap();
   }
 
   ngOnInit() {
+    // this.initMap();
+  }
+
+  private initMap() {
+    if (document.getElementById(this.id).hasChildNodes()) return;
     this.map = new ol.Map({
       target: this.id,
       layers: [
@@ -40,7 +50,7 @@ export class MapViewComponent implements OnInit, AfterViewInit {
       ],
       view: new ol.View({
         center: ol.proj.fromLonLat([this.teslaEvent.est_Lon, this.teslaEvent.est_Lat]),
-        zoom: 16
+        zoom: this.zoom ? this.zoom : 16
       }),
     });
   }

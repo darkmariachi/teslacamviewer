@@ -21,7 +21,7 @@ namespace teslacamviewer.Services
     {
         private readonly IConfiguration _config;
         private const string SENTRY_CLIPS_FOLDER_TYPE = "SentryClips";
-        private const string SAVED_CLIPS_FOLDER_TYPE = "SentryClips";
+        private const string SAVED_CLIPS_FOLDER_TYPE = "SavedClips";
         public TeslaFolderRepository(IConfiguration config) {
             _config = config;
             RootFolder = _config["rootFolder"];

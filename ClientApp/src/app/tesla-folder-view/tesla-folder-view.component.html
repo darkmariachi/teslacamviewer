@@ -1,13 +1,28 @@
 <div *ngIf="!loading">
-    <h1>{{teslaFolder.teslaEvent.timeStamp | date}}</h1>
+    <h1>{{teslaFolder.teslaEvent.timeStamp | date}} in {{teslaFolder.teslaEvent.city}}</h1>
     <hr/>
-    <div class="">
+    <div *ngIf="teslaFolder" class="row">
+        <div style="width: 100%;" class="card">
+            <div class="card-header"><h1>Map</h1></div>
+            <div class="card-body">
+                <map-view [zoom]="12" [afterInit]="true" [teslaEvent]="teslaFolder.teslaEvent" [id]="teslaFolder.name"></map-view>
+            </div>
+        </div>
+        
+    </div>
+    <div class="row">
         <h2>Clips</h2>
     </div>
-    <div *ngFor="let teslaClipsGrouped of teslaFolder.teslaClipsGroupedByDate" class="card mb-4">
+
+    <div *ngFor="let teslaClipsGrouped of teslaFolder.teslaClipsGroupedByDate" [class.fullscreen]="isFullscreen(teslaClipsGrouped) && isCurrentlyOpen(teslaClipsGrouped)" class="card mb-4">
         <div class="card-header">
             <div class="d-flex">
                 <div class="mr-auto p-2"><h2>{{teslaClipsGrouped[0].dateTime | date:"hh:mm:ss a"}}</h2></div>
+                <div class="p-2">
+                    <button class="btn btn-outline-info" *ngIf="isCurrentlyOpen(teslaClipsGrouped)" type="button" (click)="fullscreen(teslaClipsGrouped)">
+                        ↕
+                    </button>
+                </div>
                 <div class="p-2">
                     <button type="button" (click)="open(teslaClipsGrouped)" class="btn btn-outline-info">
                         <span *ngIf="!isCurrentlyOpen(teslaClipsGrouped)">🔽</span>
@@ -15,7 +30,6 @@
                     </button>
                 </div>
             </div>
-            
         </div>
         <div *ngIf="isCurrentlyOpen(teslaClipsGrouped)" class="card-body">
             <div class="row">
@@ -28,12 +42,18 @@
                 </div>
             </div>
             <div class="row mt-2">
-                <p class="text-center">
+                <div class="btn-group">
                     <button class="btn btn-lg btn-outline-secondary" (click)="play(teslaClipsGrouped[0].dateTime)">
                         <span *ngIf="!playing">▶ Play All</span>
                         <span *ngIf="playing">⏸ Pause All</span>
                     </button>
-                </p>
+                    <button [disabled]="!playing" class="btn btn-lg btn-outline-secondary" (click)="fastForward(teslaClipsGrouped[0].dateTime, false)">
+                        ⏪ Rewind 10 seconds
+                    </button>
+                    <button [disabled]="!playing" class="btn btn-lg btn-outline-secondary" (click)="fastForward(teslaClipsGrouped[0].dateTime, true)">
+                        ⏩ Forward 10 seconds
+                    </button>
+                </div>
             </div>
         </div>
     </div>
