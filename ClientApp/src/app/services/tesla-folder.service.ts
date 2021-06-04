@@ -19,4 +19,8 @@ export class TeslaFolderService {
   getTeslaFolder(folderName: string, folderType: string): Observable<TeslaFolder> {
     return this.http.get<TeslaFolder>(`${this.apiEndpoint}/${folderType}/${folderName}`);
   }
+
+  deleteTeslaFolder(folder: TeslaFolder) {
+    return this.http.delete(`${this.apiEndpoint}/${folder.folderType}/${folder.name}`);
+  }
 }

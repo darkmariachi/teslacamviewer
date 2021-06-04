@@ -17,6 +17,7 @@ namespace teslacamviewer.Services
         TeslaFolder GetTeslaFolder(string folderName, string folderType);
         Task<byte[]> GetTeslaClip(string folderName, string teslaClip, string folderType);
         Task<byte[]> GetThumbnail(string folderName, string folderType);
+        void DeleteTeslaFolder(string folderType, string folderName);
     }
     public class TeslaFolderRepository : ITeslaFolderRepository
     {
@@ -109,6 +110,16 @@ namespace teslacamviewer.Services
             || !Directory.Exists(Path.Join(RootFolder, SAVED_CLIPS_FOLDER_TYPE))) {
                 throw new Exception("The provided root teslacam directory does not exist.");
             }
+        }
+
+        public void DeleteTeslaFolder(string folderType, string folderName)
+        {
+            string path = Path.Join(RootFolder, folderType, folderName);
+            if (Directory.Exists(path)) {
+                Directory.Delete(path, true);
+                return;
+            }
+            throw new Exception($"Path {path} does not exist");
         }
     }
 }

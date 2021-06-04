@@ -43,6 +43,7 @@
                 </th>
                 <th>Location</th>
                 <th>Thumbnail</th>
+                <Th>Delete</Th>
             </tr>
         </thead>
         <tbody>
@@ -54,6 +55,7 @@
                 <td>{{tf.teslaEvent.city}}</td>
                 <td><map-view [teslaEvent]="tf.teslaEvent" [id]="tf.name"></map-view></td>
                 <td><img style="height: 100px;" [src]="tf.thumbnail ? 'api/teslafolder/get/thumbnail/'+tf.folderType+'/'+tf.name : 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/No_image_3x4.svg/1200px-No_image_3x4.svg.png'"/></td>
+                <td><!-- Disabled so i don't delete my stuff lol --><button disabled (click)="delete(tf)" class="btn btn-danger">X</button></td>
             </tr>
         </tbody>
     </table>

@@ -53,5 +53,11 @@ namespace teslacamviewer.Controllers
 
             return File(stream, "application/octet-stream", "thumb.png");
         }
+
+        [HttpDelete, Route("{folderType}/{folderName}")]
+        public IActionResult DeleteTeslaFolder(string folderType, string folderName) {
+            _teslaFolderRepository.DeleteTeslaFolder(folderType, folderName);
+            return Ok();
+        }
     }
 }

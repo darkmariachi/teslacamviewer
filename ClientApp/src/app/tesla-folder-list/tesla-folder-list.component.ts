@@ -44,4 +44,11 @@ export class TeslaFolderListComponent implements OnInit {
     return this.orderByProperty.indexOf("-") !== -1;
   }
 
+  delete(tf: TeslaFolder) {
+    this.teslaFolderService.deleteTeslaFolder(tf)
+    .subscribe(res => {
+      // how to remove from an observable??
+    });
+  }
+
 }
