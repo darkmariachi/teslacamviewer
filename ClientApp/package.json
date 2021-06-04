@@ -25,6 +25,7 @@
     "bootstrap": "^4.6.0",
     "core-js": "^3.8.3",
     "jquery": "^3.5.1",
+    "ngx-pipes": "^2.7.5",
     "oidc-client": "^1.11.3",
     "ol": "^6.5.0",
     "popper.js": "^1.16.0",

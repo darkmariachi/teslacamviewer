@@ -8,17 +8,45 @@
     <table class="table table-striped">
         <thead>
             <tr>
-                <th>Name</th>
-                <th>Reason Trigger</th>
-                <th>Number of Clips</th>
-                <th>Date</th>
-                <th>City</th>
+                <th (click)="changeOrderBy('name')">Name 
+                    <order-by-button 
+                        [isOrderedByProperty]="isOrderedByProperty('name')"
+                        [isReversed]="isReversedOrdered()">
+                    </order-by-button>
+                </th>
+                <th (click)="changeOrderBy('teslaEvent.reason')">Reason Trigger
+                    <order-by-button 
+                        [isOrderedByProperty]="isOrderedByProperty('teslaEvent.reason')"
+                        [isReversed]="isReversedOrdered()">
+                    </order-by-button>
+                </th>
+                <th  (click)="changeOrderBy('teslaClipsGroupedByDate.length')"># of Clips
+                    <order-by-button 
+                        [isOrderedByProperty]="isOrderedByProperty('teslaClipsGroupedByDate.length')"
+                        [isReversed]="isReversedOrdered()">
+                    </order-by-button>
+                </th>
+                <th (click)="changeOrderBy('teslaEvent.timeStamp')">
+                    Date
+                    <order-by-button 
+                        [isOrderedByProperty]="isOrderedByProperty('teslaEvent.timeStamp')"
+                        [isReversed]="isReversedOrdered()">
+                    </order-by-button>
+                
+                </th>
+                <th (click)="changeOrderBy('teslaEvent.city')">
+                    City
+                    <order-by-button 
+                        [isOrderedByProperty]="isOrderedByProperty('teslaEvent.city')"
+                        [isReversed]="isReversedOrdered()">
+                    </order-by-button>
+                </th>
                 <th>Location</th>
                 <th>Thumbnail</th>
             </tr>
         </thead>
         <tbody>
-            <tr *ngFor="let tf of teslaFolders | folderFilter : search">
+            <tr *ngFor="let tf of teslaFolders | folderFilter : search | orderBy: orderByProperty">
                 <td><a [routerLink]="['folders/'+ tf.folderType + '/' + tf.name]">{{tf.name}}</a></td>
                 <td>{{(tf.teslaEvent.reason).replaceAll("_", " ")}}</td>
                 <td>{{tf.teslaClipsGroupedByDate.length}}</td>

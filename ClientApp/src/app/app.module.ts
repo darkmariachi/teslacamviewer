@@ -17,6 +17,8 @@ import {VgBufferingModule} from 'videogular2/compiled/buffering';
 
 import { MapViewComponent } from './map-view/map-view.component';
 import { TeslaFolderFilterPipe } from './pipes/TeslaFolderFilterPipe';
+import { NgPipesModule } from 'ngx-pipes';
+import { OrderByButtonComponent } from './order-by-button/order-by-button.component';
 
 @NgModule({
   declarations: [
@@ -27,6 +29,7 @@ import { TeslaFolderFilterPipe } from './pipes/TeslaFolderFilterPipe';
     TeslaFolderViewComponent,
     MapViewComponent,
     TeslaFolderFilterPipe,
+    OrderByButtonComponent,
   ],
   imports: [
     BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
@@ -40,6 +43,7 @@ import { TeslaFolderFilterPipe } from './pipes/TeslaFolderFilterPipe';
     VgControlsModule,
     VgOverlayPlayModule,
     VgBufferingModule,
+    NgPipesModule,
   ],
   providers: [],
   bootstrap: [AppComponent]

@@ -14,6 +14,7 @@ export class TeslaFolderListComponent implements OnInit {
   teslaFolders$: Observable<TeslaFolder[]>;
   error:string;
   search = "";
+  orderByProperty = "name";
   constructor(private teslaFolderService: TeslaFolderService) { }
 
   ngOnInit() {
@@ -23,6 +24,24 @@ export class TeslaFolderListComponent implements OnInit {
       this.error = err.error;
       return of;
     }));
+  }
+
+  changeOrderBy(property: string) {
+    if (this.isOrderedByProperty(property)) {
+      if (!this.isReversedOrdered()) {
+        this.orderByProperty = `-${property}`;
+        return;
+      }
+    } 
+    this.orderByProperty = property
+  }
+
+  isOrderedByProperty(property: string) {
+    return this.orderByProperty.indexOf(property) !== -1;
+  }
+
+  isReversedOrdered() {
+    return this.orderByProperty.indexOf("-") !== -1;
   }
 
 }
