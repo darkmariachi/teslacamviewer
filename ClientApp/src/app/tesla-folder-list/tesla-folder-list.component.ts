@@ -13,6 +13,7 @@ export class TeslaFolderListComponent implements OnInit {
 
   teslaFolders$: Observable<TeslaFolder[]>;
   error:string;
+  search = "";
   constructor(private teslaFolderService: TeslaFolderService) { }
 
   ngOnInit() {

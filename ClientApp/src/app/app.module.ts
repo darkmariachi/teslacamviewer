@@ -16,6 +16,7 @@ import {VgOverlayPlayModule} from 'videogular2/compiled/overlay-play';
 import {VgBufferingModule} from 'videogular2/compiled/buffering';
 
 import { MapViewComponent } from './map-view/map-view.component';
+import { TeslaFolderFilterPipe } from './pipes/TeslaFolderFilterPipe';
 
 @NgModule({
   declarations: [
@@ -25,6 +26,7 @@ import { MapViewComponent } from './map-view/map-view.component';
     TeslaFolderListComponent,
     TeslaFolderViewComponent,
     MapViewComponent,
+    TeslaFolderFilterPipe,
   ],
   imports: [
     BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
