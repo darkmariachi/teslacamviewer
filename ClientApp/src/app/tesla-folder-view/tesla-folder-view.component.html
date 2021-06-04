@@ -33,15 +33,6 @@
         </div>
         <div *ngIf="isCurrentlyOpen(teslaClipsGrouped)" class="card-body">
             <div class="row">
-                <div *ngFor="let tc of teslaClipsGrouped" class="col-3">
-                    <vg-player>
-                        <video [attr.id]="getMediaId(tc.dateTime, tc.side)" style="width: 100%;" [vgMedia]="media" #media preload="auto" controls>
-                            <source [src]="'/api/teslafolder/' +teslaFolder.folderType+ '/' + teslaFolder.name + '/' + tc.name" type="video/mp4">
-                        </video>
-                    </vg-player>
-                </div>
-            </div>
-            <div class="row mt-2">
                 <div class="btn-group">
                     <button class="btn btn-lg btn-outline-secondary" (click)="play(teslaClipsGrouped[0].dateTime)">
                         <span *ngIf="!playing">▶ Play All</span>
@@ -55,6 +46,16 @@
                     </button>
                 </div>
             </div>
+            <div class="row mt-2">
+                <div *ngFor="let tc of teslaClipsGrouped" [class.col-3]="!isFullscreen(teslaClipsGrouped) " [class.col-6]="isFullscreen(teslaClipsGrouped)">
+                    <vg-player>
+                        <video [attr.id]="getMediaId(tc.dateTime, tc.side)" style="width: 100%;" [vgMedia]="media" #media preload="auto" controls>
+                            <source [src]="'/api/teslafolder/' +teslaFolder.folderType+ '/' + teslaFolder.name + '/' + tc.name" type="video/mp4">
+                        </video>
+                    </vg-player>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
