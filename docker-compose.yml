@@ -1,0 +1,15 @@
+version: "2.1"
+services:
+  teslacamviewer:
+    image: teslacamviewerlocal
+    container_name: teslacamviewer
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Chicago
+      - rootFolder=/teslacamdata
+    volumes:
+      - C:\teslacam:/teslacamdata
+    ports:
+      - 7544:80
+    restart: unless-stopped

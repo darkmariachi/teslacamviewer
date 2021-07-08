@@ -105,10 +105,13 @@ namespace teslacamviewer.Services
         }
 
         private void ValidateFolders() {
+            var sentryClipDir = Path.Join(RootFolder, SENTRY_CLIPS_FOLDER_TYPE);
+            var savedClipDir = Path.Join(RootFolder, SAVED_CLIPS_FOLDER_TYPE);
+
             if (!Directory.Exists(RootFolder) 
-            || !Directory.Exists(Path.Join(RootFolder, SENTRY_CLIPS_FOLDER_TYPE)) 
-            || !Directory.Exists(Path.Join(RootFolder, SAVED_CLIPS_FOLDER_TYPE))) {
-                throw new Exception("The provided root teslacam directory does not exist.");
+            || !Directory.Exists(sentryClipDir) 
+            || !Directory.Exists(savedClipDir)) {
+                throw new Exception($"The provided root teslacam directory does not exist. root: {RootFolder}, sentryClipDir: {sentryClipDir}, savedClipDir: {savedClipDir}");
             }
         }
 
