@@ -1,2 +1,6 @@
 bin/
 obj/
+out/
+ClientApp/node_modules/
+.vscode/
+.vs/
