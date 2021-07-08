@@ -3,7 +3,7 @@
     <hr/>
     <div *ngIf="teslaFolder" class="row">
         <div style="width: 100%;" class="card">
-            <div class="card-header"><h1>Map</h1></div>
+            <div class="card-header"><h1>Map</h1> <a [href]="'http://www.google.com/maps/place/'+teslaFolder.teslaEvent.est_Lat+','+teslaFolder.teslaEvent.est_Lon" target="_blank" class="right">View in google maps 🗺</a></div>
             <div class="card-body">
                 <map-view [zoom]="12" [afterInit]="true" [teslaEvent]="teslaFolder.teslaEvent" [id]="teslaFolder.name"></map-view>
             </div>
