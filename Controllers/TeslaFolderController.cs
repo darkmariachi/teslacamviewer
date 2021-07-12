@@ -42,7 +42,6 @@ namespace teslacamviewer.Controllers
             return Ok(_mapper.Map<TeslaFolderContract>(_teslaFolderRepository.GetTeslaFolder(folderName, folderType)));
         }
 
-        [Authorize]
         [HttpGet, Route("{folderType}/{folderName}/{fileName}")]
         public IActionResult GetTeslaClip(string folderType, string folderName, string fileName) {
             return PhysicalFile(Path.Combine(_config["rootFolder"], folderType, folderName, fileName), "application/octet-stream", fileName, enableRangeProcessing: true); // returns a FileStreamResult
