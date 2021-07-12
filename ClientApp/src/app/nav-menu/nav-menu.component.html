@@ -25,7 +25,25 @@
             [routerLinkActive]="['link-active']"
             [routerLinkActiveOptions]="{ exact: true }"
           >
-            <a class="nav-link text-dark" [routerLink]="['/']">Home</a>
+            <a *ngIf="isLoggedIn()" class="nav-link text-dark" [routerLink]="['/']">Home</a>
+          </li>
+          <li 
+            class="nav-item" 
+            [routerLinkActive]="['link-active']" 
+            [routerLinkActiveOptions]="{exact: true}">
+            <a *ngIf="!isLoggedIn()" class="nav-link text-dark" [routerLink]="['/login']">Login</a>
+          </li>
+          <li 
+            class="nav-item" 
+            [routerLinkActive]="['link-active']" 
+            [routerLinkActiveOptions]="{exact: true}">
+            <a *ngIf="isLoggedIn()" class="nav-link text-dark" [routerLink]="['/settings']">Settings</a>
+          </li>
+          <li 
+            (click)="logout()"
+            style="cursor: pointer;"
+            class="nav-item">
+              <span *ngIf="isLoggedIn()" class="nav-link text-dark">Logout</span>
           </li>
         </ul>
       </div>

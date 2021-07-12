@@ -1,7 +1,7 @@
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
 
 import { AppComponent } from './app.component';
@@ -19,6 +19,11 @@ import { MapViewComponent } from './map-view/map-view.component';
 import { TeslaFolderFilterPipe } from './pipes/TeslaFolderFilterPipe';
 import { NgPipesModule } from 'ngx-pipes';
 import { OrderByButtonComponent } from './order-by-button/order-by-button.component';
+import { LoginComponent } from './login/login.component';
+import { InitialConfigComponent } from './initial-config/initial-config.component';
+import { LoginGuard } from './services/login/login.guard';
+import { AuthInterceptorService } from './auth-interceptor.service';
+import { SettingsComponent } from './settings/settings.component';
 
 @NgModule({
   declarations: [
@@ -30,14 +35,20 @@ import { OrderByButtonComponent } from './order-by-button/order-by-button.compon
     MapViewComponent,
     TeslaFolderFilterPipe,
     OrderByButtonComponent,
+    LoginComponent,
+    InitialConfigComponent,
+    SettingsComponent,
   ],
   imports: [
     BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
     HttpClientModule,
     FormsModule,
     RouterModule.forRoot([
-      { path: '', component: TeslaFolderListComponent, pathMatch: 'full' },
-      { path: 'folders/:folderType/:folderName', component: TeslaFolderViewComponent}
+      { path: '', component: TeslaFolderListComponent, pathMatch: 'full', canActivate: [LoginGuard] },
+      { path: 'folders/:folderType/:folderName', component: TeslaFolderViewComponent, canActivate: [LoginGuard]},
+      { path: 'login', component: LoginComponent},
+      { path: 'initialConfig', component: InitialConfigComponent},
+      { path: 'settings', component: SettingsComponent, canActivate: [LoginGuard]}
     ]),
     VgCoreModule,
     VgControlsModule,
@@ -45,7 +56,9 @@ import { OrderByButtonComponent } from './order-by-button/order-by-button.compon
     VgBufferingModule,
     NgPipesModule,
   ],
-  providers: [],
+  providers: [
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptorService, multi: true },
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

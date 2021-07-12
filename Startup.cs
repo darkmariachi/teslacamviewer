@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using teslacamviewer.Data;
 using teslacamviewer.Data.Repositories;
+using teslacamviewer.Helpers;
 using teslacamviewer.Services;
 
 namespace teslacamviewer
@@ -34,6 +35,7 @@ namespace teslacamviewer
             });
             services.AddDbContext<TeslaContext>();
             services.AddScoped<ITeslaConfigurationRepository, TeslaConfigurationRepository>();
+            services.AddAutoMapper(typeof(Startup));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -52,6 +54,7 @@ namespace teslacamviewer
 
             app.UseHttpsRedirection();
             app.UseStaticFiles();
+            app.UseMiddleware<JwtMiddleware>();
             if (!env.IsDevelopment())
             {
                 app.UseSpaStaticFiles();
