@@ -13,8 +13,15 @@ export class LoginService {
     localStorage['loggedIn'] = val;
   }
 
+  get jwtToken(): string {
+    return localStorage['jwtToken'];
+  }
+
+  set jwtToken(val: string) {
+    localStorage['jwtToken'] = val;
+  }
+
   constructor(private router: Router) { 
-    // this.isLoggedIn = localStorage['loggedIn'];
   }
   
   login(password: string) {

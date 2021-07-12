@@ -1,7 +1,7 @@
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
 
 import { AppComponent } from './app.component';
@@ -22,6 +22,7 @@ import { OrderByButtonComponent } from './order-by-button/order-by-button.compon
 import { LoginComponent } from './login/login.component';
 import { InitialConfigComponent } from './initial-config/initial-config.component';
 import { LoginGuard } from './services/login/login.guard';
+import { AuthInterceptorService } from './auth-interceptor.service';
 
 @NgModule({
   declarations: [
@@ -52,7 +53,9 @@ import { LoginGuard } from './services/login/login.guard';
     VgBufferingModule,
     NgPipesModule,
   ],
-  providers: [],
+  providers: [
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptorService, multi: true },
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
