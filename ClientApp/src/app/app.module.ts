@@ -19,6 +19,9 @@ import { MapViewComponent } from './map-view/map-view.component';
 import { TeslaFolderFilterPipe } from './pipes/TeslaFolderFilterPipe';
 import { NgPipesModule } from 'ngx-pipes';
 import { OrderByButtonComponent } from './order-by-button/order-by-button.component';
+import { LoginComponent } from './login/login.component';
+import { InitialConfigComponent } from './initial-config/initial-config.component';
+import { LoginGuard } from './services/login/login.guard';
 
 @NgModule({
   declarations: [
@@ -30,14 +33,18 @@ import { OrderByButtonComponent } from './order-by-button/order-by-button.compon
     MapViewComponent,
     TeslaFolderFilterPipe,
     OrderByButtonComponent,
+    LoginComponent,
+    InitialConfigComponent,
   ],
   imports: [
     BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
     HttpClientModule,
     FormsModule,
     RouterModule.forRoot([
-      { path: '', component: TeslaFolderListComponent, pathMatch: 'full' },
-      { path: 'folders/:folderType/:folderName', component: TeslaFolderViewComponent}
+      { path: '', component: TeslaFolderListComponent, pathMatch: 'full', canActivate: [LoginGuard] },
+      { path: 'folders/:folderType/:folderName', component: TeslaFolderViewComponent, canActivate: [LoginGuard]},
+      { path: 'login', component: LoginComponent},
+      { path: 'initialConfig', component: InitialConfigComponent}
     ]),
     VgCoreModule,
     VgControlsModule,
