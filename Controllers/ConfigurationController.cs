@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using teslacamviewer.Data.DataModels;
 using teslacamviewer.Data.Repositories;
+using teslacamviewer.ViewModels;
 
 namespace teslacamviewer.Controllers
 {
@@ -26,6 +27,11 @@ namespace teslacamviewer.Controllers
         public async Task<IActionResult> Post([FromBody] TeslaConfig config)
         {
             return Ok(await _repo.SaveConfig(config));
+        }
+
+        [HttpPost, Route("login")]
+        public async Task<IActionResult> Login([FromBody] LoginViewModel login) {
+            return Ok(await _repo.Login(login));
         }
     }
 }
