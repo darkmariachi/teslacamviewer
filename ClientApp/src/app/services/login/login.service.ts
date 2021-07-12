@@ -1,36 +1,57 @@
+import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
+import { Observable, Subject } from 'rxjs';
+import { ConfigurationModel } from 'src/app/models/ConfigurationModel';
 
 @Injectable({
   providedIn: 'root'
 })
 export class LoginService {
 
-  get isLoggedIn(): boolean {
-    return JSON.parse(localStorage['loggedIn']) as boolean;
-  }
-  set isLoggedIn(val: boolean) {
-    localStorage['loggedIn'] = val;
+  private readonly apiEndpoint = 'api/configuration';
+
+  constructor(
+    private router: Router,
+    private httpClient: HttpClient) { 
+
   }
 
   get jwtToken(): string {
-    return localStorage['jwtToken'];
+    return localStorage.getItem('jwtToken');
   }
 
   set jwtToken(val: string) {
-    localStorage['jwtToken'] = val;
+    if( val === null) {
+      localStorage.removeItem('jwtToken');
+      return;
+    }
+    localStorage.setItem('jwtToken', val);
+  }
+  
+  login(password: string): Observable<any> {
+    var subject = new Subject<any>();
+    this.httpClient.post(`${this.apiEndpoint}/login`, {password: password})
+    .subscribe((res: any) => {
+      this.jwtToken = res.token;
+      subject.next(null);
+    }, (err) => {
+      subject.next(err);
+    });
+    return subject.asObservable();
+  }
+  
+  logout(): void {
+    this.jwtToken = null;
+    this.router.navigate(['login'])
+  }
+  
+
+  initializeConfig(config: ConfigurationModel) {
+    return this.httpClient.post(`${this.apiEndpoint}`, config);
   }
 
-  constructor(private router: Router) { 
-  }
-  
-  login(password: string) {
-    // TODO: implement this shit lol
-    this.isLoggedIn = true;
-  }
-  
-  logout() {
-    this.isLoggedIn = false;
-    this.router.navigate(['login'])
+  get isLoggedIn() {
+    return this.jwtToken !== undefined && this.jwtToken !== null;
   }
 }

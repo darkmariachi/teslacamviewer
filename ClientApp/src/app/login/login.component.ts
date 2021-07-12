@@ -11,6 +11,7 @@ import { LoginService } from '../services/login/login.service';
 export class LoginComponent implements OnInit {
 
   password = '';
+  error: string;
 
   constructor(
     private configService: ConfigService,
@@ -22,19 +23,25 @@ export class LoginComponent implements OnInit {
     this.configService.getConfig()
     .subscribe(c => {
       if (!c) {
-        // this.router.navigate(['initialConfig']);
+        this.router.navigate(['initialConfig']);
       }
     });
   }
 
   login() {
-    this.loginService.login(this.password);
-    this.router.navigate(['']);
+    this.loginService.login(this.password)
+    .subscribe(error => {
+      if (error) {
+        this.error = error.error;
+      }
+      else {
+        this.router.navigate(['']);
+      }
+    })
   }
 
   logout() {
     this.loginService.logout();
-    console.log(`${this.isLoggedIn}`)
   }
 
   get isLoggedIn(): boolean {
