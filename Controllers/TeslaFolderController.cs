@@ -48,7 +48,6 @@ namespace teslacamviewer.Controllers
             return PhysicalFile(Path.Combine(_config["rootFolder"], folderType, folderName, fileName), "application/octet-stream", fileName, enableRangeProcessing: true); // returns a FileStreamResult
         }
 
-        [Authorize]
         [HttpGet, Route("get/thumbnail/{folderType}/{folderName}")]
         public async Task<IActionResult> GetThumbnail(string folderType, string folderName) {
             var stream = await _teslaFolderRepository.GetThumbnail(folderName, folderType);

@@ -28,12 +28,6 @@
             <a *ngIf="isLoggedIn()" class="nav-link text-dark" [routerLink]="['/']">Home</a>
           </li>
           <li 
-            (click)="logout()"
-            style="cursor: pointer;"
-            class="nav-item">
-              <span *ngIf="isLoggedIn()" class="nav-link text-dark">Logout</span>
-          </li>
-          <li 
             class="nav-item" 
             [routerLinkActive]="['link-active']" 
             [routerLinkActiveOptions]="{exact: true}">
@@ -44,6 +38,12 @@
             [routerLinkActive]="['link-active']" 
             [routerLinkActiveOptions]="{exact: true}">
             <a *ngIf="isLoggedIn()" class="nav-link text-dark" [routerLink]="['/settings']">Settings</a>
+          </li>
+          <li 
+            (click)="logout()"
+            style="cursor: pointer;"
+            class="nav-item">
+              <span *ngIf="isLoggedIn()" class="nav-link text-dark">Logout</span>
           </li>
         </ul>
       </div>

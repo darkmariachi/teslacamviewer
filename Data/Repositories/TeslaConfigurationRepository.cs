@@ -13,6 +13,7 @@ namespace teslacamviewer.Data.Repositories
         Task<TeslaConfig> GetConfig();
         Task<TeslaConfig> SaveConfig(TeslaConfig config);
         Task<bool> Login(LoginViewModel login);
+        Task<bool> ChangePassword(ChangePasswordViewModel changePassword);
     }
     public class TeslaConfigurationRepository : ITeslaConfigurationRepository
     {
@@ -42,14 +43,25 @@ namespace teslacamviewer.Data.Repositories
 
         public async Task<bool> Login(LoginViewModel login) 
         {
-            var config = await GetConfig();
-            if (config == null) {
+            return await isValidPassword(login.Password);
+            
+        }
+        
+        public async Task<bool> ChangePassword(ChangePasswordViewModel changePassword) 
+        {
+            if (!await isValidPassword(changePassword.Currentpassword)) {
                 return false;
             }
-            return config.Password == Hash(login.Password, Convert.FromBase64String(config.Salt));
+            var newSalt = GenerateSalt();
+            var config = await _context.TeslaConfigs.FirstOrDefaultAsync();
+            config.Password = Hash(changePassword.Newpassword, newSalt);
+            config.Salt = Convert.ToBase64String(newSalt);
+            await _context.SaveChangesAsync();
+            return true;
         }
 
-        private byte[] GenerateSalt() {
+        private byte[] GenerateSalt() 
+        {
             byte[] salt = new byte[128/8];
             using (var rng = RandomNumberGenerator.Create()) 
             {
@@ -58,13 +70,24 @@ namespace teslacamviewer.Data.Repositories
             return salt;
         }
 
-        private string Hash(string password, byte[] salt) {
+        private string Hash(string password, byte[] salt) 
+        {
             return Convert.ToBase64String(KeyDerivation.Pbkdf2(
             password: password,
             salt: salt,
             prf: KeyDerivationPrf.HMACSHA1,
             iterationCount: 10000,
             numBytesRequested: 256 / 8));
+        }
+
+        private async Task<bool> isValidPassword(string password) 
+        {
+            var config = await GetConfig();
+            if (config == null) {
+                throw new Exception("Config has not been created");
+            }
+            var hashedProvidedPassword = Hash(password, Convert.FromBase64String(config.Salt));
+            return (config.Password == hashedProvidedPassword);
         }
     }
 }
