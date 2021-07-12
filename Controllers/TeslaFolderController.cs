@@ -6,6 +6,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using teslacamviewer.Contracts;
+using teslacamviewer.Helpers;
 using teslacamviewer.Models;
 using teslacamviewer.Services;
 
@@ -27,6 +28,7 @@ namespace teslacamviewer.Controllers
             _config = config;
         }
 
+        [Authorize]
         [HttpGet]
         public IActionResult GetTeslaFolders() {
             var x = _mapper.Map<List<TeslaFolderContract>>(_teslaFolderRepository.GetTeslaFolders());
@@ -34,16 +36,19 @@ namespace teslacamviewer.Controllers
             return Ok(x);
         }
 
+        [Authorize]
         [HttpGet, Route("{folderType}/{folderName}")]
         public IActionResult GetTeslaFolder(string folderType, string folderName) {
             return Ok(_mapper.Map<TeslaFolderContract>(_teslaFolderRepository.GetTeslaFolder(folderName, folderType)));
         }
 
+        [Authorize]
         [HttpGet, Route("{folderType}/{folderName}/{fileName}")]
         public IActionResult GetTeslaClip(string folderType, string folderName, string fileName) {
             return PhysicalFile(Path.Combine(_config["rootFolder"], folderType, folderName, fileName), "application/octet-stream", fileName, enableRangeProcessing: true); // returns a FileStreamResult
         }
 
+        [Authorize]
         [HttpGet, Route("get/thumbnail/{folderType}/{folderName}")]
         public async Task<IActionResult> GetThumbnail(string folderType, string folderName) {
             var stream = await _teslaFolderRepository.GetThumbnail(folderName, folderType);
@@ -54,6 +59,7 @@ namespace teslacamviewer.Controllers
             return File(stream, "application/octet-stream", "thumb.png");
         }
 
+        [Authorize]
         [HttpDelete, Route("{folderType}/{folderName}")]
         public IActionResult DeleteTeslaFolder(string folderType, string folderName) {
             _teslaFolderRepository.DeleteTeslaFolder(folderType, folderName);

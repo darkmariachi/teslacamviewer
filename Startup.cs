@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using teslacamviewer.Data;
 using teslacamviewer.Data.Repositories;
+using teslacamviewer.Helpers;
 using teslacamviewer.Services;
 
 namespace teslacamviewer
@@ -53,6 +54,7 @@ namespace teslacamviewer
 
             app.UseHttpsRedirection();
             app.UseStaticFiles();
+            app.UseMiddleware<JwtMiddleware>();
             if (!env.IsDevelopment())
             {
                 app.UseSpaStaticFiles();
