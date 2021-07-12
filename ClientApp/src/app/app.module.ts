@@ -23,6 +23,7 @@ import { LoginComponent } from './login/login.component';
 import { InitialConfigComponent } from './initial-config/initial-config.component';
 import { LoginGuard } from './services/login/login.guard';
 import { AuthInterceptorService } from './auth-interceptor.service';
+import { SettingsComponent } from './settings/settings.component';
 
 @NgModule({
   declarations: [
@@ -36,6 +37,7 @@ import { AuthInterceptorService } from './auth-interceptor.service';
     OrderByButtonComponent,
     LoginComponent,
     InitialConfigComponent,
+    SettingsComponent,
   ],
   imports: [
     BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
@@ -45,7 +47,8 @@ import { AuthInterceptorService } from './auth-interceptor.service';
       { path: '', component: TeslaFolderListComponent, pathMatch: 'full', canActivate: [LoginGuard] },
       { path: 'folders/:folderType/:folderName', component: TeslaFolderViewComponent, canActivate: [LoginGuard]},
       { path: 'login', component: LoginComponent},
-      { path: 'initialConfig', component: InitialConfigComponent}
+      { path: 'initialConfig', component: InitialConfigComponent},
+      { path: 'settings', component: SettingsComponent, canActivate: [LoginGuard]}
     ]),
     VgCoreModule,
     VgControlsModule,
