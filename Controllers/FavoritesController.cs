@@ -1,6 +1,9 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using teslacamviewer.Contracts;
 using teslacamviewer.Data.Repositories;
 using teslacamviewer.Helpers;
 using teslacamviewer.Services;
@@ -13,14 +16,17 @@ namespace teslacamviewer.Controllers
     {
         private readonly IFavoritesRepository _favoritesRepo;
         private readonly ITeslaFolderRepository _teslaFolderRepository;
+        private readonly IMapper _mapper;
 
         public FavoritesController(
             IFavoritesRepository favoritesRepo,
-            ITeslaFolderRepository teslaFolderRepository
+            ITeslaFolderRepository teslaFolderRepository,
+            IMapper mapper
             ) 
         {
             _favoritesRepo = favoritesRepo;
             _teslaFolderRepository = teslaFolderRepository;
+            _mapper = mapper;
         }
 
         [Authorize]
@@ -45,8 +51,9 @@ namespace teslacamviewer.Controllers
             var folders = _teslaFolderRepository.GetTeslaFolders();
             var folderFilter = (await _favoritesRepo.GetFavorites()).Where(f => f.Type == "Folder").ToList();
             var filteredFolders = folders.Where(f => folderFilter.Any(folder => folder.Name == f.Name)).ToList();
-            filteredFolders.ForEach(tf => tf.TeslaClips = null);
-            return Ok(filteredFolders);
+            var result = _mapper.Map<List<TeslaFolderContract>>(filteredFolders);
+            result.ForEach(tf => tf.TeslaClips = null);
+            return Ok(result);
         }
     }
 }
