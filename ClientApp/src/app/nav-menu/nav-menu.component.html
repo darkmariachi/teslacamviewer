@@ -37,6 +37,12 @@
             class="nav-item" 
             [routerLinkActive]="['link-active']" 
             [routerLinkActiveOptions]="{exact: true}">
+            <a *ngIf="isLoggedIn()" class="nav-link text-dark" [routerLink]="['/favorites']">Favorites</a>
+          </li>
+          <li 
+            class="nav-item" 
+            [routerLinkActive]="['link-active']" 
+            [routerLinkActiveOptions]="{exact: true}">
             <a *ngIf="isLoggedIn()" class="nav-link text-dark" [routerLink]="['/settings']">Settings</a>
           </li>
           <li 
