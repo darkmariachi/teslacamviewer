@@ -20,7 +20,7 @@
         </thead>
         <tbody>
             <tr *ngFor="let tf of teslaFolders | folderFilter : search">
-                <td><a [routerLink]="['folders/'+ tf.folderType + '/' + tf.name]">{{tf.name}}</a></td>
+                <td><a [routerLink]="['/folders/'+ tf.folderType + '/' + tf.name]">{{tf.name}}</a></td>
                 <td>{{(tf.teslaEvent.reason).replaceAll("_", " ")}}</td>
                 <td>{{tf.teslaClipsGroupedByDate.length}}</td>
                 <td>{{tf.teslaEvent.timeStamp | date}}</td>
