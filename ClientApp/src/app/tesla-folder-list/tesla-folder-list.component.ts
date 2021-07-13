@@ -3,6 +3,8 @@ import { Observable, of } from 'rxjs';
 import { TeslaFolder } from '../models/TeslaFolder';
 import { TeslaFolderService } from '../services/tesla-folder.service';
 import { catchError } from 'rxjs/operators';
+import { ConfirmationModalComponent } from '../shared/confirmation-modal/confirmation-modal.component';
+import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 
 @Component({
   selector: 'app-tesla-folder-list',
@@ -15,15 +17,13 @@ export class TeslaFolderListComponent implements OnInit {
   error:string;
   search = "";
   orderByProperty = "name";
-  constructor(private teslaFolderService: TeslaFolderService) { }
+
+  constructor(
+    private teslaFolderService: TeslaFolderService,
+    private modalService: NgbModal) { }
 
   ngOnInit() {
-    this.teslaFolders$ = this.teslaFolderService.getTeslaFolders()
-    .pipe(catchError((err) => {
-      console.log(err);
-      this.error = err.error;
-      return of;
-    }));
+    this.getFolders()
   }
 
   changeOrderBy(property: string) {
@@ -45,10 +45,28 @@ export class TeslaFolderListComponent implements OnInit {
   }
 
   delete(tf: TeslaFolder) {
-    this.teslaFolderService.deleteTeslaFolder(tf)
-    .subscribe(res => {
-      // how to remove from an observable??
+    const modalRef = this.modalService.open(ConfirmationModalComponent);
+    modalRef.componentInstance.title = 'Confirm Deletion';
+    modalRef.componentInstance.text = `Are you sure you want to delete the folder ${tf.name} for the date ${tf.teslaEvent.timeStamp}.
+       Please notice, deletion is PERMANENT.`;
+    modalRef.result.then((res) => {
+      if (res) {
+            this.teslaFolderService.deleteTeslaFolder(tf)
+            .subscribe(() => {
+              this.getFolders();
+            });
+      }
+    }).catch(() => {
+
     });
+  }
+
+  private getFolders() {
+    this.teslaFolders$ = this.teslaFolderService.getTeslaFolders()
+    .pipe(catchError((err) => {
+      this.error = err.error;
+      return of;
+    }));
   }
 
 }

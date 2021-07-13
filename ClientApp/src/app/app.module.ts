@@ -24,6 +24,8 @@ import { InitialConfigComponent } from './initial-config/initial-config.componen
 import { LoginGuard } from './services/login/login.guard';
 import { AuthInterceptorService } from './auth-interceptor.service';
 import { SettingsComponent } from './settings/settings.component';
+import { ConfirmationModalComponent } from './shared/confirmation-modal/confirmation-modal.component';
+import { NgbModalModule } from '@ng-bootstrap/ng-bootstrap';
 
 @NgModule({
   declarations: [
@@ -38,6 +40,7 @@ import { SettingsComponent } from './settings/settings.component';
     LoginComponent,
     InitialConfigComponent,
     SettingsComponent,
+    ConfirmationModalComponent,
   ],
   imports: [
     BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
@@ -55,10 +58,12 @@ import { SettingsComponent } from './settings/settings.component';
     VgOverlayPlayModule,
     VgBufferingModule,
     NgPipesModule,
+    NgbModalModule
   ],
   providers: [
     { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptorService, multi: true },
   ],
-  bootstrap: [AppComponent]
+  bootstrap: [AppComponent],
+  entryComponents: [ConfirmationModalComponent]
 })
 export class AppModule { }
