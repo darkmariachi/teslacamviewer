@@ -43,6 +43,7 @@
                 </th>
                 <th>Location</th>
                 <th>Thumbnail</th>
+                <th>Favorite</th>
                 <Th>Delete</Th>
             </tr>
         </thead>
@@ -54,7 +55,8 @@
                 <td>{{tf.teslaEvent.timeStamp | date}}</td>
                 <td>{{tf.teslaEvent.city}}</td>
                 <td><map-view [teslaEvent]="tf.teslaEvent" [id]="tf.name"></map-view></td>
-                <td><img style="height: 100px;" [src]="tf.thumbnail ? 'api/teslafolder/get/thumbnail/'+tf.folderType+'/'+tf.name : 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/No_image_3x4.svg/1200px-No_image_3x4.svg.png'"/></td>
+                <td><img style="width: 100%;"  [src]="tf.thumbnail ? 'api/teslafolder/get/thumbnail/'+tf.folderType+'/'+tf.name : '/assets/noimage.png'"/></td>
+                <td (click)="toggleFavorite(tf)"><span style="padding-left: 35%; cursor: pointer;" [ngStyle]="{'color':getColorIfFavorite(tf)}" class="material-icons-outlined">star_rate</span></td>
                 <td><button (click)="delete(tf)" class="btn btn-danger">X</button></td>
             </tr>
         </tbody>

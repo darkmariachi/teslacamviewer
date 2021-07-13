@@ -26,6 +26,7 @@ import { AuthInterceptorService } from './auth-interceptor.service';
 import { SettingsComponent } from './settings/settings.component';
 import { ConfirmationModalComponent } from './shared/confirmation-modal/confirmation-modal.component';
 import { NgbModalModule } from '@ng-bootstrap/ng-bootstrap';
+import { FavoritesComponent } from './favorites/favorites.component';
 
 @NgModule({
   declarations: [
@@ -41,6 +42,7 @@ import { NgbModalModule } from '@ng-bootstrap/ng-bootstrap';
     InitialConfigComponent,
     SettingsComponent,
     ConfirmationModalComponent,
+    FavoritesComponent,
   ],
   imports: [
     BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
@@ -51,7 +53,8 @@ import { NgbModalModule } from '@ng-bootstrap/ng-bootstrap';
       { path: 'folders/:folderType/:folderName', component: TeslaFolderViewComponent, canActivate: [LoginGuard]},
       { path: 'login', component: LoginComponent},
       { path: 'initialConfig', component: InitialConfigComponent},
-      { path: 'settings', component: SettingsComponent, canActivate: [LoginGuard]}
+      { path: 'settings', component: SettingsComponent, canActivate: [LoginGuard]},
+      { path: 'favorites', component: FavoritesComponent, canActivate: [LoginGuard]}
     ]),
     VgCoreModule,
     VgControlsModule,
