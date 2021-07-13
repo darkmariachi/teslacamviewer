@@ -17,6 +17,7 @@ export class TeslaFolderListComponent implements OnInit {
   error:string;
   search = "";
   orderByProperty = "name";
+  favorites = [];
 
   constructor(
     private teslaFolderService: TeslaFolderService,
@@ -59,6 +60,14 @@ export class TeslaFolderListComponent implements OnInit {
     }).catch(() => {
 
     });
+  }
+
+  getColorIfFavorite(tf : TeslaFolder) {
+    return this.favorites[tf.name] ? 'red': 'black';
+  }
+
+  toggleFavorite(tf: TeslaFolder) {
+    this.favorites[tf.name] = !this.favorites[tf.name];
   }
 
   private getFolders() {

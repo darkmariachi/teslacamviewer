@@ -26,6 +26,7 @@
     "bootstrap": "^4.6.0",
     "core-js": "^3.8.3",
     "jquery": "^3.5.1",
+    "material-icons": "^0.7.6",
     "ngx-pipes": "^2.7.5",
     "oidc-client": "^1.11.3",
     "ol": "^6.5.0",
