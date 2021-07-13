@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ApplicationRef, ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { Favorite } from '../models/Favorite';
 import { FavoritesService } from '../services/favorites/favorites.service';
 
@@ -11,7 +11,9 @@ export class FavoritesComponent implements OnInit {
 
   teslaFolders = [];
   search = '';
-  constructor(private favoritesService: FavoritesService) { }
+  constructor(
+    private favoritesService: FavoritesService,
+    private changeDetectorRef: ChangeDetectorRef) { }
 
   ngOnInit() {
     this.favoritesService.getFavoriteFolders()
@@ -26,6 +28,8 @@ export class FavoritesComponent implements OnInit {
       if (type === 'Folder') {
         const folderToUnfav = this.teslaFolders.find(f => f.name === name);
         this.teslaFolders.splice(this.teslaFolders.indexOf(folderToUnfav), 1);
+        //weird hack for the search filter??
+        this.teslaFolders = JSON.parse(JSON.stringify(this.teslaFolders));
       }
     });
   }
