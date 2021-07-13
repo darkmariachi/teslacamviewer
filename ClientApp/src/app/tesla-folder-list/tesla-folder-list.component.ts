@@ -5,6 +5,8 @@ import { TeslaFolderService } from '../services/tesla-folder.service';
 import { catchError } from 'rxjs/operators';
 import { ConfirmationModalComponent } from '../shared/confirmation-modal/confirmation-modal.component';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { FavoritesService } from '../services/favorites/favorites.service';
+import { Favorite } from '../models/Favorite';
 
 @Component({
   selector: 'app-tesla-folder-list',
@@ -21,10 +23,12 @@ export class TeslaFolderListComponent implements OnInit {
 
   constructor(
     private teslaFolderService: TeslaFolderService,
-    private modalService: NgbModal) { }
+    private modalService: NgbModal,
+    private favoritesService: FavoritesService) { }
 
   ngOnInit() {
-    this.getFolders()
+    this.getFolders();
+    this.getFavorites();
   }
 
   changeOrderBy(property: string) {
@@ -63,11 +67,15 @@ export class TeslaFolderListComponent implements OnInit {
   }
 
   getColorIfFavorite(tf : TeslaFolder) {
-    return this.favorites[tf.name] ? 'red': 'black';
+    return this.favorites.find((f: Favorite) => f.name == tf.name && f.type == 'Folder') ? 'red': 'black';
   }
 
   toggleFavorite(tf: TeslaFolder) {
-    this.favorites[tf.name] = !this.favorites[tf.name];
+    const newFav = { name: tf.name,  type: 'Folder'} as Favorite
+    this.favoritesService.toggleFavorite(newFav)
+    .subscribe(() => {
+      this.addOrRemoveFavorite(newFav);
+    });
   }
 
   private getFolders() {
@@ -76,6 +84,22 @@ export class TeslaFolderListComponent implements OnInit {
       this.error = err.error;
       return of;
     }));
+  }
+
+  private getFavorites() {
+    this.favoritesService.getFavorites()
+    .subscribe(favs => {
+      this.favorites = favs;
+    })
+  }
+
+  private addOrRemoveFavorite(favorite: Favorite) {
+    const fav = this.favorites.find(f => f.name == favorite.name && f.type == favorite.type);
+    if (!fav) {
+      this.favorites.push(favorite);
+    } else {
+      this.favorites.splice(this.favorites.indexOf(fav), 1);
+    }
   }
 
 }

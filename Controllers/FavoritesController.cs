@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using teslacamviewer.Data.Repositories;
+using teslacamviewer.Helpers;
 using teslacamviewer.ViewModels;
 
 namespace teslacamviewer.Controllers
