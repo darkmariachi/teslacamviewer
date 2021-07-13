@@ -10,9 +10,9 @@ namespace teslacamviewer.Data
     {
         private readonly IConfiguration _config;
         public DbSet<TeslaConfig> TeslaConfigs {get;set;}
+        public DbSet<Favorite> Favorites {get;set;}
         public TeslaContext(IConfiguration config) {
             _config = config;
-            Database.EnsureCreated();
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) {
