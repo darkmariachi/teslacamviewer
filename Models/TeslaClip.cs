@@ -8,7 +8,7 @@ namespace teslacamviewer.Models
     {
         public string Name {get;set;}
         public string ActualPath {get;set;}
-        public DateTime DateTime {get;set;}
+        public DateTime? DateTime {get;set;}
         public SideEnum Side {get;set;}
     }
 }
