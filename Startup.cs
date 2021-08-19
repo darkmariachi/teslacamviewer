@@ -3,9 +3,13 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.SpaServices.AngularCli;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using teslacamviewer.Data;
+using teslacamviewer.Data.Repositories;
+using teslacamviewer.Helpers;
 using teslacamviewer.Services;
 
 namespace teslacamviewer
@@ -24,16 +28,19 @@ namespace teslacamviewer
         {
             services.AddAutoMapper(typeof(Startup));
             services.AddScoped<ITeslaFolderRepository, TeslaFolderRepository>();
+            services.AddScoped<IFavoritesRepository, FavoritesRepository>();
             services.AddControllersWithViews();
             // In production, the Angular files will be served from this directory
             services.AddSpaStaticFiles(configuration =>
             {
                 configuration.RootPath = "ClientApp/dist";
             });
+            services.AddDbContext<TeslaContext>();
+            services.AddScoped<ITeslaConfigurationRepository, TeslaConfigurationRepository>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, TeslaContext context)
         {
             if (env.IsDevelopment())
             {
@@ -48,6 +55,7 @@ namespace teslacamviewer
 
             app.UseHttpsRedirection();
             app.UseStaticFiles();
+            app.UseMiddleware<JwtMiddleware>();
             if (!env.IsDevelopment())
             {
                 app.UseSpaStaticFiles();
@@ -74,6 +82,7 @@ namespace teslacamviewer
                     spa.UseAngularCliServer(npmScript: "start");
                 }
             });
+            context.Database.Migrate();
         }
     }
 }

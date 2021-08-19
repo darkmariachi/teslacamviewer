@@ -1,0 +1,16 @@
+<h1>Welcome to Tesla Cam Viewer</h1>
+<hr/>
+<h2>Initial Setup<br/><small>Please provide a password, <strong>make sure to remember it.</strong></small></h2>
+
+<form (ngSubmit)="start()" name="settings">
+    <div class="form-group">
+        <label>Password</label>
+        <input name="password" [(ngModel)]="config.password" type="password" class="form-control" placeholder="Password...">
+    </div>
+    <div class="form-group">
+        <label>Repeat Password</label>
+        <input name="repeatpassword" [(ngModel)]="config.repeatpassword" type="password" class="form-control" placeholder="Repeat password...">
+    </div>
+    <button type="submit" class="btn btn-success">Submit</button>
+</form><br/>
+<div *ngIf="error" class="alert alert-danger">{{error}}</div>

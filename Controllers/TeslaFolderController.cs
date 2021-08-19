@@ -6,6 +6,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using teslacamviewer.Contracts;
+using teslacamviewer.Helpers;
 using teslacamviewer.Models;
 using teslacamviewer.Services;
 
@@ -27,6 +28,7 @@ namespace teslacamviewer.Controllers
             _config = config;
         }
 
+        [Authorize]
         [HttpGet]
         public IActionResult GetTeslaFolders() {
             var x = _mapper.Map<List<TeslaFolderContract>>(_teslaFolderRepository.GetTeslaFolders());
@@ -34,6 +36,7 @@ namespace teslacamviewer.Controllers
             return Ok(x);
         }
 
+        [Authorize]
         [HttpGet, Route("{folderType}/{folderName}")]
         public IActionResult GetTeslaFolder(string folderType, string folderName) {
             return Ok(_mapper.Map<TeslaFolderContract>(_teslaFolderRepository.GetTeslaFolder(folderName, folderType)));
@@ -54,6 +57,7 @@ namespace teslacamviewer.Controllers
             return File(stream, "application/octet-stream", "thumb.png");
         }
 
+        [Authorize]
         [HttpDelete, Route("{folderType}/{folderName}")]
         public IActionResult DeleteTeslaFolder(string folderType, string folderName) {
             _teslaFolderRepository.DeleteTeslaFolder(folderType, folderName);
