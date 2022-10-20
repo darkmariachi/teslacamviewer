@@ -21,7 +21,7 @@ namespace teslacamviewer.Controllers
         [HttpGet]
         public async Task<IActionResult> Get() 
         {
-            return Ok(await _repo.GetConfig());
+            return Ok(await _repo.GetPublicConfig());
         }
 
         [HttpPost]
@@ -48,6 +48,14 @@ namespace teslacamviewer.Controllers
             }
             var validPassword = await _repo.ChangePassword(changePassword);
             return validPassword ? Ok() : BadRequest("Invalid password provided.");
+        }
+
+        [HttpDelete]
+        [Authorize]
+        public async Task<IActionResult> DeleteConfig()
+        {
+            await _repo.DeleteConfigs();
+            return Ok(new { message = "Configurations have been deleted" });
         }
 
     }

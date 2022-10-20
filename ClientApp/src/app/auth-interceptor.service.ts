@@ -18,15 +18,15 @@ export class AuthInterceptorService implements HttpInterceptor {
       headers: req.headers.set('Authorization', `${this.loginService.jwtToken}`)
     });
 
-    return next.handle(authreq).pipe( tap(() => {},
-    (err: any) => {
-    if (err instanceof HttpErrorResponse) {
-      if (err.status !== 401) {
-       return;
-      }
-      this.loginService.logout();
-      this.router.navigate(['login']);
-    }
-  }));
+    return next.handle(authreq).pipe(tap(() => { },
+      (err: any) => {
+        if (err instanceof HttpErrorResponse) {
+          if (err.status !== 401) {
+            return;
+          }
+          this.loginService.logout();
+          this.router.navigate(['login']);
+        }
+      }));
   }
 }

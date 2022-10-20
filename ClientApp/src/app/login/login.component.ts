@@ -22,7 +22,7 @@ export class LoginComponent implements OnInit {
   ngOnInit() {
     this.configService.getConfig()
     .subscribe(c => {
-      if (!c) {
+      if (c.isAuthorizationEnabled && !c.configExists) {
         this.router.navigate(['initialConfig']);
       }
     });

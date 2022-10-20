@@ -25,7 +25,7 @@ namespace teslacamviewer.Helpers
         {
             var token = context.Request.Headers["Authorization"].FirstOrDefault()?.Split(" ").Last();
 
-            if (token != null)
+            if (token != null && token != "null")
                 attachUserToContext(context ,token);
 
             await _next(context);
