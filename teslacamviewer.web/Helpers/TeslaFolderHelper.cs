@@ -14,10 +14,11 @@ namespace teslacamviewer.Helpers
             var strings = fullPath.Split(Path.DirectorySeparatorChar);
             return strings[strings.Length - 1];
         }
-
-        public static bool IsValidFolder(List<string> files, string directory) {
-
-            return files.Contains(Path.Combine(directory, "event.json"));
+        
+        public static bool IsValidFolder(string directory) {
+            var directoryName = directory.Split(Path.DirectorySeparatorChar).Last();
+            var regex = new System.Text.RegularExpressions.Regex(@"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}");
+            return regex.IsMatch(directoryName);
         }
 
         public static bool ContainsThumbnail(List<string> files, string directory) {
@@ -38,6 +39,11 @@ namespace teslacamviewer.Helpers
 
         public static SideEnum TeslaClipSideParser(string fullPath) {
             return Enum.Parse<SideEnum>(fullPath.Split("-").ToList().Last().Split(".").First().Split("_").First(), true);
+        }
+
+        internal static bool ContainsTeslaEvent(string directory)
+        {
+            return Directory.GetFiles(directory).Contains(Path.Combine(directory, "event.json"));
         }
     }
 }

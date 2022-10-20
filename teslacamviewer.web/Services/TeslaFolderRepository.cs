@@ -60,12 +60,12 @@ namespace teslacamviewer.Services
         }
 
         private IEnumerable<TeslaFolder> BuildTeslaFolders(string[] directories, string folderType) {
-            return directories.Select(d => BuildTeslaFolder(d, folderType)).Where(t => t != null).ToList();
+            return directories.Select(d => BuildTeslaFolder(d, folderType)).Where(t => t != null && t.TeslaClips.Any()).ToList();
         }
 
         private TeslaFolder BuildTeslaFolder(string directory, string folderType) {
                 var files = Directory.GetFiles(directory).ToList();
-                if (TeslaFolderHelper.IsValidFolder(files, directory)) {
+                if (TeslaFolderHelper.IsValidFolder(directory)) {
                     return new TeslaFolder 
                     {
                         ActualPath = directory, 
@@ -80,6 +80,10 @@ namespace teslacamviewer.Services
         }
 
         private TeslaEvent BuildTeslaEvent(string directory) {
+            if (!TeslaFolderHelper.ContainsTeslaEvent(directory))
+            {
+                return null;
+            }
             using (StreamReader r = new StreamReader(Path.Combine(directory, "event.json"))) 
             {
                 string json = r.ReadToEnd();

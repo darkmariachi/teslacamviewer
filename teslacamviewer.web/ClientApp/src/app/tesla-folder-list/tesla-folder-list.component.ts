@@ -78,6 +78,10 @@ export class TeslaFolderListComponent implements OnInit {
     });
   }
 
+  convertDirectoryNameToDate(directoryName: string) {    
+    return new Date(`${directoryName.split("_")[0]}T00:00:00`);
+  }
+
   private getFolders() {
     this.teslaFolders$ = this.teslaFolderService.getTeslaFolders()
     .pipe(catchError((err) => {

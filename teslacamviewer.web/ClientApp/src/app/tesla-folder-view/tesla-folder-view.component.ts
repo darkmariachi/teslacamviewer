@@ -20,6 +20,7 @@ export class TeslaFolderViewComponent implements OnInit {
   loadingError$ = new Subject<boolean>();
   currentlyOpenGroup: TeslaClip[];
   playing = false;
+  folderName = "";
 
   private fullScreenClip: TeslaClip[];
 
@@ -32,6 +33,7 @@ export class TeslaFolderViewComponent implements OnInit {
     this.route.params.subscribe(params => {
       const folderName = params['folderName'];
       const folderType = params['folderType'];
+      this.folderName = folderName;
       this.teslaFolderService.getTeslaFolder(folderName, folderType)
       .subscribe(res => {
         this.teslaFolder = res;
