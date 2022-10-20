@@ -1,5 +1,6 @@
 using System.Linq;
 using AutoMapper;
+using teslacamviewer.Data.DataModels;
 using teslacamviewer.Models;
 
 namespace teslacamviewer.Contracts
@@ -15,6 +16,7 @@ namespace teslacamviewer.Contracts
 
             CreateMap<TeslaEvent, TeslaEventContract>();
             CreateMap<TeslaClip, TeslaClipContract>();
+            CreateMap<TeslaConfig, TeslaConfigPublicContract>();
         }
     }
 }
