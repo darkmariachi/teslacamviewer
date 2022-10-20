@@ -1,4 +1,7 @@
 import { Component } from '@angular/core';
+import { Observable, Subject } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { ConfigService } from '../services/config/config.service';
 import { LoginService } from '../services/login/login.service';
 
 @Component({
@@ -9,12 +12,19 @@ import { LoginService } from '../services/login/login.service';
 export class NavMenuComponent {
   isExpanded = false;
 
-  constructor(private loginService: LoginService) {
-
+  constructor(
+    private loginService: LoginService,
+    private configService: ConfigService) {
   }
 
-  isLoggedIn() {
-    return this.loginService.isLoggedIn;
+  isLoggedIn(): Observable<boolean> {
+    return this.configService.authEnabled$.pipe(map(authEnabled => {
+      return authEnabled && this.loginService.isLoggedIn;
+    }));
+  }
+
+  authRequired(): Subject<boolean> {
+    return this.configService.authEnabled$;
   }
 
   logout() {
