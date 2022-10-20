@@ -26,4 +26,4 @@ FROM mcr.microsoft.com/dotnet/aspnet:5.0
 RUN mkdir /teslacamdata
 WORKDIR /app
 COPY --from=build-env /app/out .
-ENTRYPOINT ["dotnet", "teslacamviewer.dll"]
+ENTRYPOINT ["dotnet", "teslacamviewer.web.dll"]
