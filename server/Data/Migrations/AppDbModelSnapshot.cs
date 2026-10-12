@@ -17,6 +17,58 @@ namespace TeslaCam.Data.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
 
+            modelBuilder.Entity("TeslaCam.Data.ArchiverSession", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("LastSeenAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastStatusJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Open")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ArchiverSessions");
+                });
+
+            modelBuilder.Entity("TeslaCam.Data.ArchiverSync", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("EventsPlanned")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("FilesArchived")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("FilesPlanned")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("FinishedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ArchiverSyncs");
+                });
+
             modelBuilder.Entity("TeslaCam.Data.ClipFile", b =>
                 {
                     b.Property<int>("Id")

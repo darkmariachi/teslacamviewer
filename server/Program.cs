@@ -25,9 +25,11 @@ builder.Services.AddSingleton<MediaProcessor>();
 builder.Services.AddSingleton<Scanner>();
 builder.Services.AddSingleton<JobRunner>();
 builder.Services.AddSingleton<TrashService>();
+builder.Services.AddSingleton<ArchiverService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<Scanner>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<JobRunner>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<TrashService>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<ArchiverService>());
 
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
@@ -84,6 +86,7 @@ app.MapEventsApi();
 app.MapMediaApi();
 app.MapCollectionsApi();
 app.MapAdminApi();
+app.MapArchiverApi();
 
 // Unknown API paths are errors; every other path belongs to the single-page app.
 app.MapFallback("/api/{**path}", () => Results.NotFound());

@@ -11,6 +11,8 @@ public class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
     public DbSet<Collection> Collections => Set<Collection>();
     public DbSet<CollectionEvent> CollectionEvents => Set<CollectionEvent>();
     public DbSet<Setting> Settings => Set<Setting>();
+    public DbSet<ArchiverSession> ArchiverSessions => Set<ArchiverSession>();
+    public DbSet<ArchiverSync> ArchiverSyncs => Set<ArchiverSync>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {

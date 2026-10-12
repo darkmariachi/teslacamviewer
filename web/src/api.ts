@@ -135,6 +135,50 @@ export interface Settings {
   previewFps: number
   previewQuality: number
   webhookUrl: string | null
+  archiverUrl: string | null
+}
+
+export interface ArchiverStatus {
+  cpuTempC: number | null
+  throttled: number | null
+  wifiSsid: string | null
+  wifiStrength: number | null
+  wifiIp: string | null
+  etherIp: string | null
+  uptimeSec: number | null
+  drivesActive: boolean | null
+  totalBytes: number | null
+  freeBytes: number | null
+  snapshots: number | null
+  newestSnapshotUtc: string | null
+  fanRpm: number | null
+  supplyVolts: number | null
+}
+
+export interface ArchiverSync {
+  id: number
+  startedAt: string
+  finishedAt: string | null
+  filesPlanned: number | null
+  eventsPlanned: number | null
+  filesArchived: number | null
+}
+
+/** The teslausb device in the car, as seen from the home network. */
+export interface Archiver {
+  configured: boolean
+  url: string | null
+  hookPath: string
+  online: boolean
+  lastSeen: string | null
+  onlineSince: string | null
+  status: ArchiverStatus | null
+  error: string | null
+  uploading: ArchiverSync | null
+  syncs: ArchiverSync[]
+  sessions: { id: number; startedAt: string; lastSeenAt: string; open: boolean }[]
+  newestClip: string | null
+  lastIndexed: string | null
 }
 
 export interface Overview {
@@ -304,6 +348,10 @@ export const api = {
   retentionApply: (olderThanDays: number, types: EventType[]) =>
     request<{ moved: number }>('POST', '/api/admin/retention/apply', { olderThanDays, types }),
   stats: () => request<Stats>('GET', '/api/stats'),
+
+  archiver: () => request<Archiver>('GET', '/api/archiver'),
+  archiverSync: () => request<void>('POST', '/api/archiver/sync'),
+  archiverPoll: () => request<void>('POST', '/api/archiver/poll'),
 }
 
 export const thumbUrl = (eventId: number) => `/api/media/thumb/${eventId}`

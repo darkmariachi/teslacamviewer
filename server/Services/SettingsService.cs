@@ -27,6 +27,8 @@ public record AppSettings
     public int PreviewQuality { get; init; } = 27;
     /// <summary>Optional URL that receives a JSON POST when a new Sentry event is indexed.</summary>
     public string? WebhookUrl { get; init; }
+    /// <summary>Address of the teslausb web interface on the home network, e.g. http://teslausb.local.</summary>
+    public string? ArchiverUrl { get; init; }
 
     public AppSettings Sanitized() => this with
     {
@@ -43,7 +45,17 @@ public record AppSettings
         PreviewFps = Math.Clamp(PreviewFps, 10, 60),
         PreviewQuality = Math.Clamp(PreviewQuality, 18, 36),
         WebhookUrl = string.IsNullOrWhiteSpace(WebhookUrl) ? null : WebhookUrl.Trim(),
+        ArchiverUrl = NormalizeUrl(ArchiverUrl),
     };
+
+    /// <summary>Accepts "teslausb.local" as well as a full URL; returns null when it is not a usable http address.</summary>
+    private static string? NormalizeUrl(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        var text = value.Trim().TrimEnd('/');
+        if (!text.Contains("://")) text = "http://" + text;
+        return Uri.TryCreate(text, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https" ? text : null;
+    }
 }
 
 public class SettingsService(IDbContextFactory<AppDb> dbf)

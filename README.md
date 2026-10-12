@@ -28,6 +28,8 @@ a fast, phone-friendly library with a synced multi-camera player.
 - **Six-camera cars** – pillar cameras are picked up automatically and laid out as a 3 × 2 grid.
 - **HEVC** – clips in a codec browsers may not play get H.264 copies; the originals are never modified.
 - **Webhook** – optional JSON POST when a new Sentry event arrives (handy for Home Assistant).
+- **Car status** – if you archive with teslausb, see whether the car is home, when it last connected, whether an
+  upload is running, and the device's Wi-Fi, temperature, power and free space. See [teslausb](#teslausb).
 
 ## Running it
 
@@ -91,6 +93,25 @@ Admin panel.
 The app trusts `X-Forwarded-For` and `X-Forwarded-Proto` from private addresses, so a proxy on the same host
 or LAN works without extra configuration. Video is served with range requests; make sure the proxy does not
 buffer whole responses.
+
+## teslausb
+
+The Car tab in Admin follows a [teslausb](https://github.com/marcone/teslausb) device without changing teslausb
+itself:
+
+1. In **Admin → Car**, enter the address of the teslausb web page (for example `http://teslausb.local`). The
+   app polls its status report every 30 seconds; whenever it answers, the car is on the home network.
+2. Copy the two lines shown there into `teslausb_setup_variables.conf` and re-run teslausb's setup:
+
+   ```bash
+   export WEBHOOK_ENABLED=true
+   export WEBHOOK_URL=http://<server>:7544/api/archiver/hook/<token>
+   ```
+
+   teslausb then announces each upload as it starts and finishes, and the app rescans shortly after one ends.
+
+The token in the webhook address is the only credential the car needs; the endpoint accepts nothing else
+without a login. "Upload now" asks teslausb to start archiving immediately.
 
 ## Development
 

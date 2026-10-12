@@ -136,3 +136,26 @@ public class Setting
     public string Key { get; set; } = "";
     public string Value { get; set; } = "";
 }
+
+/// <summary>One stretch of time during which the in-car archiver (teslausb) answered on the home network.</summary>
+public class ArchiverSession
+{
+    public int Id { get; set; }
+    public DateTime StartedAt { get; set; }
+    public DateTime LastSeenAt { get; set; }
+    public bool Open { get; set; }
+    /// <summary>The most recent status report received during this session, as JSON.</summary>
+    public string? LastStatusJson { get; set; }
+}
+
+/// <summary>One upload run reported by the archiver's start and finish notifications.</summary>
+public class ArchiverSync
+{
+    public int Id { get; set; }
+    public DateTime StartedAt { get; set; }
+    public DateTime? FinishedAt { get; set; }
+    public int? FilesPlanned { get; set; }
+    public int? EventsPlanned { get; set; }
+    public int? FilesArchived { get; set; }
+    public string? Message { get; set; }
+}

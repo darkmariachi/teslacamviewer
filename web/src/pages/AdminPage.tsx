@@ -9,8 +9,9 @@ import { cx, eventTitle, formatBytes, formatDateTime, formatDuration, formatRela
 import {
   Badge, Button, Card, ConfirmDialog, EmptyState, Field, IconButton, PageHeader, ProgressBar, Segmented, Spinner, Toggle, inputClass,
 } from '../components/ui'
+import CarTab from './CarTab'
 
-type Tab = 'processing' | 'library' | 'settings' | 'trash' | 'account'
+type Tab = 'processing' | 'car' | 'library' | 'settings' | 'trash' | 'account'
 
 const KIND_LABEL: Record<JobKind, string> = {
   probe: 'Read clip details',
@@ -36,6 +37,7 @@ export default function AdminPage() {
           onChange={(value) => setParams(value === 'processing' ? {} : { tab: value }, { replace: true })}
           options={[
             { value: 'processing', label: 'Processing' },
+            { value: 'car', label: 'Car' },
             { value: 'library', label: 'Library' },
             { value: 'settings', label: 'Settings' },
             { value: 'trash', label: overview.data?.trash.count ? `Trash (${overview.data.trash.count})` : 'Trash' },
@@ -49,6 +51,8 @@ export default function AdminPage() {
         <EmptyState icon={<AlertTriangle className="size-6" />} title="Couldn't load status" />
       ) : tab === 'processing' ? (
         <Processing overview={overview.data} />
+      ) : tab === 'car' ? (
+        <CarTab />
       ) : tab === 'library' ? (
         <Library overview={overview.data} />
       ) : tab === 'settings' ? (

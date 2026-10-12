@@ -60,7 +60,10 @@ export function formatRelative(iso: string | null): string {
   if (seconds < 45) return 'just now'
   if (seconds < 3600) return `${Math.round(seconds / 60)} min ago`
   if (seconds < 86400) return `${Math.round(seconds / 3600)} h ago`
-  return `${Math.round(seconds / 86400)} d ago`
+  const days = seconds / 86400
+  if (days < 60) return `${Math.round(days)} d ago`
+  if (days < 730) return `${Math.round(days / 30.4)} months ago`
+  return `${(days / 365.25).toFixed(1)} years ago`
 }
 
 const REASONS: Record<string, string> = {
