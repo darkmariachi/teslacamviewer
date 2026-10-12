@@ -5,7 +5,7 @@ where your clips are archived (for example by [teslausb](https://github.com/marc
 a fast, phone-friendly library with a synced multi-camera player.
 
 > **v2** is a full rewrite (.NET 10, React, SQLite, ffmpeg). The original .NET 5 / Angular app lives on the
-> [`legacy`](../../tree/legacy) branch.
+> [earlier history](../../tree/152f739).
 
 ## What it does
 
