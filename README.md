@@ -1,4 +1,4 @@
-# rufogongora/teslacamviewer
+# darkmariachi/teslacamviewer
 This docker image gives you a friendly interface to navigate your sentry and saved clips from your tesla drive.
 
 Simply map your local tesla clips folder into the `/teslacamdata` folder
@@ -8,7 +8,7 @@ Here's an example of my docker-compose file:
 version: "2.1"
 services:
   teslacamviewer:
-    image:  ghcr.io/rufogongora/teslacamviewer:main
+    image:  ghcr.io/darkmariachi/teslacamviewer:main
     container_name: teslacamviewer
     environment:
       - PUID=1000
@@ -59,4 +59,4 @@ For example:
 - ❎ Merging of videos
 
 
-Please send any feedback at @rufogongora
+Please send any feedback at @darkmariachi
