@@ -113,6 +113,8 @@ Create `server/appsettings.Development.json` (git-ignored) to point at some samp
 
 `npm run build` writes the production bundle into `server/wwwroot`, which the server then serves itself.
 
+Run the tests with `dotnet test` from the repository root.
+
 ## Keyboard shortcuts
 
 `Space` play/pause · `←` `→` 5 seconds (with `Shift`: 1 second) · `1`–`6` choose camera · `G` merged view ·
