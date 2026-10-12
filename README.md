@@ -4,8 +4,8 @@ A self-hosted web app for browsing the Sentry and dashcam clips your Tesla recor
 where your clips are archived (for example by [teslausb](https://github.com/marcone/teslausb)) and it gives you
 a fast, phone-friendly library with a synced multi-camera player.
 
-> **v2** is a full rewrite (.NET 10, React, SQLite, ffmpeg). The original .NET 5 / Angular app lives on the
-> [earlier history](../../tree/152f739).
+> **v2** is a full rewrite (.NET 10, React, SQLite, ffmpeg). The original .NET 5 / Angular app is still
+> available in the [earlier history](../../tree/152f739).
 
 ## What it does
 

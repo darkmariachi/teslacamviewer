@@ -30,8 +30,9 @@ public class JobQueue(IDbContextFactory<AppDb> dbf, SettingsService settings)
 
     public static int BasePriority(JobKind kind) => kind switch
     {
-        JobKind.Probe => 100,
-        JobKind.Thumbnail => 90,
+        // Thumbnails first: they make the library usable while the slower steps catch up.
+        JobKind.Thumbnail => 100,
+        JobKind.Probe => 90,
         JobKind.Export => 60,
         JobKind.Transcode => 40,
         _ => 10,
@@ -51,8 +52,8 @@ public class JobQueue(IDbContextFactory<AppDb> dbf, SettingsService settings)
     /// <summary>Adds the jobs every freshly indexed event needs to the context. The caller saves.</summary>
     public void AddInitialJobs(AppDb db, Event ev)
     {
-        db.Jobs.Add(NewJob(ev, JobKind.Probe));
         db.Jobs.Add(NewJob(ev, JobKind.Thumbnail));
+        db.Jobs.Add(NewJob(ev, JobKind.Probe));
         if (ShouldAutoPreview(ev)) db.Jobs.Add(NewJob(ev, JobKind.Preview));
     }
 

@@ -33,10 +33,10 @@ public class MediaProcessor(IDbContextFactory<AppDb> dbf, AppPaths paths, Ffmpeg
         var ev = await LoadAsync(db, eventId, ct);
         var files = ev.Segments.SelectMany(s => s.Files).ToList();
         var done = 0;
-        foreach (var file in files)
+        // A few files at a time: each probe mostly waits on the disk.
+        await Parallel.ForEachAsync(files, new ParallelOptions { MaxDegreeOfParallelism = 3, CancellationToken = ct }, async (file, token) =>
         {
-            ct.ThrowIfCancellationRequested();
-            var result = await ffmpeg.ProbeAsync(paths.ClipPath(ev, file), ct);
+            var result = await ffmpeg.ProbeAsync(paths.ClipPath(ev, file), token);
             if (result != null)
             {
                 file.Codec = result.Codec;
@@ -44,8 +44,8 @@ public class MediaProcessor(IDbContextFactory<AppDb> dbf, AppPaths paths, Ffmpeg
                 file.Height = result.Height;
                 file.DurationSec = result.DurationSec;
             }
-            progress?.Invoke(++done / (double)files.Count);
-        }
+            progress?.Invoke(Interlocked.Increment(ref done) / (double)files.Count);
+        });
         foreach (var seg in ev.Segments)
         {
             var longest = seg.Files.Max(f => f.DurationSec ?? 0);

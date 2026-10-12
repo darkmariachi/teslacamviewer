@@ -135,7 +135,8 @@ export default function MapPage() {
 
   return (
     <div className="relative h-[calc(100dvh-7rem-env(safe-area-inset-bottom))] lg:h-dvh">
-      <div ref={node} className="absolute inset-0 bg-ink" />
+      {/* Sized explicitly: MapLibre sets position: relative on its container, which would collapse an inset-0 box. */}
+      <div ref={node} className="size-full bg-ink" />
 
       <div className="pointer-events-none absolute inset-x-0 top-0 flex flex-wrap items-center gap-2 p-3 sm:p-4">
         <div className="pointer-events-auto rounded-xl bg-ink/80 backdrop-blur">

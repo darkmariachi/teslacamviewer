@@ -12,7 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 var paths = new AppPaths(builder.Configuration);
 builder.Services.AddSingleton(paths);
-builder.Services.AddDbContextFactory<AppDb>(o => o.UseSqlite($"Data Source={paths.DbFile};Default Timeout=30"));
+builder.Services.AddDbContextFactory<AppDb>(o => o.UseSqlite($"Data Source={paths.DbFile};Default Timeout=30",
+    sqlite => sqlite.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
 builder.Services.AddHttpClient();
 
 builder.Services.AddSingleton<SettingsService>();
