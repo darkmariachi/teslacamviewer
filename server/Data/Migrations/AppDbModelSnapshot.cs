@@ -138,6 +138,9 @@ namespace TeslaCam.Data.Migrations
                     b.Property<double?>("Lon")
                         .HasColumnType("REAL");
 
+                    b.Property<int>("MetaVersion")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -162,6 +165,9 @@ namespace TeslaCam.Data.Migrations
 
                     b.Property<string>("Reason")
                         .HasColumnType("TEXT");
+
+                    b.Property<double?>("ReasonValue")
+                        .HasColumnType("REAL");
 
                     b.Property<string>("RelPath")
                         .IsRequired()

@@ -29,7 +29,10 @@ public class Event
     public string? City { get; set; }
     public double? Lat { get; set; }
     public double? Lon { get; set; }
+    /// <summary>Tesla's reason code without any trailing measurement, e.g. "sentry_aware_accel".</summary>
     public string? Reason { get; set; }
+    /// <summary>The measurement some reason codes end with (the size of the jolt for bump events).</summary>
+    public double? ReasonValue { get; set; }
     public string? TriggerCamera { get; set; }
 
     /// <summary>Comma separated camera names present in this event.</summary>
@@ -38,6 +41,8 @@ public class Event
     public long SizeBytes { get; set; }
     /// <summary>File count + size + newest mtime; a change triggers a reindex.</summary>
     public string Signature { get; set; } = "";
+    /// <summary>Version of the event.json parsing this row was built with; older rows get their metadata re-read.</summary>
+    public int MetaVersion { get; set; }
 
     public bool Favorite { get; set; }
     public string? Notes { get; set; }

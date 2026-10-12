@@ -262,7 +262,7 @@ export function Player({ detail, previewJob, onGeneratePreview, range, onRangeCh
               fullscreen ? 'max-h-full' : others.length === 0 ? 'aspect-4/3 max-h-[78dvh]' : wide ? 'sm:aspect-20/9' : 'sm:aspect-video',
               fullscreen && (wide ? 'aspect-20/9' : others.length ? 'aspect-video' : 'aspect-4/3'),
             )}
-            style={fullscreen ? { maxWidth: `calc(100dvh * ${wide ? 20 / 9 : others.length ? 16 / 9 : 4 / 3} - 7rem)` } : undefined}
+            style={fullscreen ? { maxWidth: `calc((100dvh - 7rem) * ${wide ? 20 / 9 : others.length ? 16 / 9 : 4 / 3})` } : undefined}
           >
             {cameras.map((camera) => {
               const file = fileFor(camera)

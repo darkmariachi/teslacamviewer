@@ -21,6 +21,7 @@ public static class Dto
         e.Lat,
         e.Lon,
         e.Reason,
+        e.ReasonValue,
         cameras = Cameras.Parse(e.Cameras),
         e.SegmentCount,
         e.SizeBytes,

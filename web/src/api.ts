@@ -16,6 +16,7 @@ export interface EventSummary {
   lat: number | null
   lon: number | null
   reason: string | null
+  reasonValue: number | null
   cameras: string[]
   segmentCount: number
   sizeBytes: number

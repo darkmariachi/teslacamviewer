@@ -25,6 +25,9 @@ public partial class Scanner(IDbContextFactory<AppDb> dbf, AppPaths paths, JobQu
     // Recent clips further apart than this belong to different drives.
     private static readonly TimeSpan RecentGap = TimeSpan.FromSeconds(100);
 
+    // Raise this when event.json parsing changes so existing rows pick up the new fields without a full reindex.
+    private const int CurrentMetaVersion = 2;
+
     private readonly SemaphoreSlim _trigger = new(0);
     private readonly SemaphoreSlim _scanLock = new(1);
 
@@ -32,6 +35,10 @@ public partial class Scanner(IDbContextFactory<AppDb> dbf, AppPaths paths, JobQu
 
     [GeneratedRegex(@"^(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})-(front|back|left_repeater|right_repeater|left_pillar|right_pillar)\.mp4$", RegexOptions.IgnoreCase)]
     private static partial Regex ClipName();
+
+    // "sentry_aware_accel_0.532005": a reason code followed by a measurement.
+    [GeneratedRegex(@"^(.*?)_(\d+(?:\.\d+)?)$")]
+    private static partial Regex ReasonWithValue();
 
     public void RequestScan()
     {
@@ -103,7 +110,7 @@ public partial class Scanner(IDbContextFactory<AppDb> dbf, AppPaths paths, JobQu
 
             await using var db = await dbf.CreateDbContextAsync(ct);
             var existing = await db.Events.Where(e => e.TrashedAt == null)
-                .Select(e => new { e.Id, e.Type, e.Name, e.RelPath, e.Signature }).ToListAsync(ct);
+                .Select(e => new { e.Id, e.Type, e.Name, e.RelPath, e.Signature, e.MetaVersion }).ToListAsync(ct);
             var existingByKey = existing.ToDictionary(e => (e.Type, e.Name, e.RelPath));
 
             int added = 0, updated = 0, removed = 0;
@@ -114,7 +121,15 @@ public partial class Scanner(IDbContextFactory<AppDb> dbf, AppPaths paths, JobQu
                 ct.ThrowIfCancellationRequested();
                 if (existingByKey.TryGetValue((pe.Type, pe.Name, pe.RelPath), out var known))
                 {
-                    if (known.Signature == pe.Signature) continue;
+                    if (known.Signature == pe.Signature)
+                    {
+                        if (known.MetaVersion == CurrentMetaVersion) continue;
+                        // Same files, older parsing: refresh the event.json fields only.
+                        var stale = await db.Events.FirstAsync(e => e.Id == known.Id, ct);
+                        ReadMetadata(stale, pe.EventJsonPath);
+                        pending++;
+                        continue;
+                    }
                     var ev = await db.Events.Include(e => e.Segments).FirstAsync(e => e.Id == known.Id, ct);
                     await db.Jobs.Where(j => j.EventId == ev.Id && j.Status == JobStatus.Queued).ExecuteDeleteAsync(ct);
                     db.Segments.RemoveRange(ev.Segments);
@@ -277,10 +292,16 @@ public partial class Scanner(IDbContextFactory<AppDb> dbf, AppPaths paths, JobQu
         ev.StartTime = segments[0].StartTime;
         ev.DurationSec = segments.Sum(s => s.DurationSec);
         ev.EndTime = segments[^1].StartTime.AddSeconds(segments[^1].DurationSec);
+        ReadMetadata(ev, pe.EventJsonPath);
+    }
+
+    private static void ReadMetadata(Event ev, string? eventJsonPath)
+    {
         ev.TriggerTime = null;
         ev.City = ev.Reason = ev.TriggerCamera = null;
-        ev.Lat = ev.Lon = null;
-        if (pe.EventJsonPath != null) ReadEventJson(ev, pe.EventJsonPath);
+        ev.Lat = ev.Lon = ev.ReasonValue = null;
+        ev.MetaVersion = CurrentMetaVersion;
+        if (eventJsonPath != null) ReadEventJson(ev, eventJsonPath);
     }
 
     private static void ReadEventJson(Event ev, string path)
@@ -296,11 +317,18 @@ public partial class Scanner(IDbContextFactory<AppDb> dbf, AppPaths paths, JobQu
             if (DateTime.TryParse(Get("timestamp"), CultureInfo.InvariantCulture, DateTimeStyles.None, out var ts))
                 ev.TriggerTime = DateTime.SpecifyKind(ts, DateTimeKind.Unspecified);
             ev.City = string.IsNullOrWhiteSpace(Get("city")) ? null : Get("city");
-            ev.Reason = string.IsNullOrWhiteSpace(Get("reason")) ? null : Get("reason");
+            if (Get("reason") is { Length: > 0 } reason)
+            {
+                var match = ReasonWithValue().Match(reason);
+                ev.Reason = match.Success ? match.Groups[1].Value : reason;
+                if (match.Success && double.TryParse(match.Groups[2].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
+                    ev.ReasonValue = value;
+            }
             ev.TriggerCamera = Cameras.FromEventJsonIndex(Get("camera"));
             if (double.TryParse(Get("est_lat"), NumberStyles.Float, CultureInfo.InvariantCulture, out var lat) &&
                 double.TryParse(Get("est_lon"), NumberStyles.Float, CultureInfo.InvariantCulture, out var lon) &&
-                (lat != 0 || lon != 0))
+                // The car writes zeros (or denormal garbage) when it has no GPS fix.
+                Math.Abs(lat) <= 90 && Math.Abs(lon) <= 180 && (Math.Abs(lat) > 1e-4 || Math.Abs(lon) > 1e-4))
             {
                 ev.Lat = lat;
                 ev.Lon = lon;

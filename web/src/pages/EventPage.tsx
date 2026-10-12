@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { api, type EventDetail, type Job } from '../api'
 import {
-  cameraLabel, cameraShort, cx, eventTitle, formatBytes, formatClock, formatDay, formatDuration, formatTime, reasonLabel, TYPE_LABEL,
+  cameraLabel, cameraShort, cx, eventTitle, formatBytes, formatClock, formatDay, formatDuration, formatTime, TYPE_LABEL,
 } from '../lib/format'
 import { Badge, Button, Card, ConfirmDialog, EmptyState, IconButton, Menu, MenuItem, ProgressBar, Spinner, inputClass } from '../components/ui'
 import { Player } from '../components/Player'
@@ -259,9 +259,10 @@ export default function EventPage() {
               <Fact label="Cameras" value={String(summary.cameras.length)} />
               <Fact label="Size" value={formatBytes(summary.sizeBytes)} />
             </dl>
-            {summary.reason && reasonLabel(summary.reason) !== summary.reason && (
-              <p className="mt-3 truncate font-mono text-[11px] text-faint" title="Tesla's reason code">
+            {summary.reason && (
+              <p className="mt-3 truncate font-mono text-[11px] text-faint" title="Tesla's reason code and, for bumps, the measured jolt">
                 {summary.reason}
+                {summary.reasonValue != null && ` · ${summary.reasonValue.toFixed(2)}`}
               </p>
             )}
           </Card>
