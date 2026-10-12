@@ -14,6 +14,8 @@ public class Ffmpeg(SettingsService settings, ILogger<Ffmpeg> log)
 {
     private const string VaapiDevice = "/dev/dri/renderD128";
     private string? _detectedEncoder;
+    // Newer Intel chips only expose the low-power H.264 encoder.
+    private bool _vaapiLowPower;
     private string? _version;
 
     public string? Version => _version;
@@ -42,24 +44,29 @@ public class Ffmpeg(SettingsService settings, ILogger<Ffmpeg> log)
             return "software";
         }
         if (!File.Exists(VaapiDevice)) return "software";
-        try
+        foreach (var lowPower in new[] { false, true })
         {
-            var (code, _, stderr) = await Exec("ffmpeg",
-            [
-                "-hide_banner", "-v", "error", "-vaapi_device", VaapiDevice,
-                "-f", "lavfi", "-i", "testsrc=size=640x480:rate=24", "-t", "0.5",
-                "-vf", "format=nv12,hwupload", "-c:v", "h264_vaapi", "-f", "null", "-",
-            ], ct);
-            if (code == 0)
+            try
             {
-                log.LogInformation("Hardware encoding (VAAPI) is available");
-                return "vaapi";
+                string[] extra = lowPower ? ["-low_power", "1"] : [];
+                var (code, _, stderr) = await Exec("ffmpeg",
+                [
+                    "-hide_banner", "-v", "error", "-vaapi_device", VaapiDevice,
+                    "-f", "lavfi", "-i", "testsrc=size=640x480:rate=24", "-t", "0.5",
+                    "-vf", "format=nv12,hwupload", "-c:v", "h264_vaapi", .. extra, "-f", "null", "-",
+                ], ct);
+                if (code == 0)
+                {
+                    _vaapiLowPower = lowPower;
+                    log.LogInformation("Hardware encoding (VAAPI{Mode}) is available", lowPower ? ", low power" : "");
+                    return "vaapi";
+                }
+                log.LogInformation("VAAPI test encode failed{Mode}: {Err}", lowPower ? " (low power)" : "", Tail(stderr, 300));
             }
-            log.LogInformation("VAAPI test encode failed, using software encoding: {Err}", Tail(stderr, 300));
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            log.LogInformation("VAAPI probe failed: {Msg}", ex.Message);
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                log.LogInformation("VAAPI probe failed: {Msg}", ex.Message);
+            }
         }
         return "software";
     }
@@ -76,7 +83,7 @@ public class Ffmpeg(SettingsService settings, ILogger<Ffmpeg> log)
     {
         var gop = (fps * 2).ToString();
         string[] args = encoder == "vaapi"
-            ? ["-c:v", "h264_vaapi", "-qp", quality.ToString(), "-g", gop]
+            ? ["-c:v", "h264_vaapi", .. (string[])(_vaapiLowPower ? ["-low_power", "1"] : []), "-qp", quality.ToString(), "-g", gop]
             : ["-c:v", "libx264", "-preset", "veryfast", "-crf", quality.ToString(), "-g", gop];
         var threads = settings.Current.FfmpegThreads;
         return threads > 0 ? [.. args, "-threads", threads.ToString()] : args;

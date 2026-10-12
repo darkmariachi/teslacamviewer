@@ -1,0 +1,7 @@
+.git
+**/bin
+**/obj
+**/node_modules
+server/wwwroot
+server/appsettings.Development.json
+**/*.db*
