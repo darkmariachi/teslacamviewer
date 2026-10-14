@@ -37,6 +37,20 @@ public class JobRunner(IDbContextFactory<AppDb> dbf, JobQueue queue, MediaProces
             .ExecuteUpdateAsync(s => s.SetProperty(j => j.Status, JobStatus.Canceled).SetProperty(j => j.FinishedAt, DateTime.UtcNow)) > 0;
     }
 
+    /// <summary>
+    /// Cancels every queued or running job for an event and waits for the running ones to let go of its files,
+    /// so the clips can be moved or rewritten.
+    /// </summary>
+    public async Task StopEventJobsAsync(int eventId)
+    {
+        await using var db = await dbf.CreateDbContextAsync();
+        var active = await db.Jobs.Where(j => j.EventId == eventId && (j.Status == JobStatus.Queued || j.Status == JobStatus.Running))
+            .Select(j => j.Id).ToListAsync();
+        foreach (var id in active) await CancelAsync(id);
+        for (var i = 0; i < 100 && active.Any(_running.ContainsKey); i++) await Task.Delay(100);
+        if (active.Any(_running.ContainsKey)) throw new InvalidOperationException("A job for this event is still running. Try again in a moment.");
+    }
+
     public bool BackgroundAllowed()
     {
         var s = settings.Current;

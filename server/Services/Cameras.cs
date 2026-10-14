@@ -90,4 +90,32 @@ public static class Timeline
         var outside = ev.Segments.Where(s => s.StartTime.AddSeconds(s.DurationSec) <= from || s.StartTime >= to).ToList();
         return outside.Count == ev.Segments.Count ? [] : outside;
     }
+
+    /// <summary>
+    /// What keeping only <paramref name="start"/>–<paramref name="end"/> (seconds on the event timeline) takes:
+    /// segments wholly outside go, and the ones at the edges are cut (From/To in seconds within the segment).
+    /// Edges within half a second of a segment boundary leave that segment whole.
+    /// </summary>
+    public static RangePlan KeepRange(Event ev, double start, double end)
+    {
+        var drop = new List<Segment>();
+        var cuts = new List<SegmentCut>();
+        double acc = 0;
+        foreach (var seg in ev.Segments.OrderBy(s => s.Index))
+        {
+            var from = Math.Max(0, start - acc);
+            var to = Math.Min(seg.DurationSec, end - acc);
+            acc += seg.DurationSec;
+            if (to - from < 0.5)
+                drop.Add(seg);
+            else if (from >= 0.5 || to <= seg.DurationSec - 0.5)
+                cuts.Add(new SegmentCut(seg, from < 0.5 ? 0 : from, to > seg.DurationSec - 0.5 ? null : to));
+        }
+        return new RangePlan(drop, cuts);
+    }
 }
+
+/// <summary>Cut one segment to From–To seconds; a null To keeps it to the end.</summary>
+public record SegmentCut(Segment Segment, double From, double? To);
+
+public record RangePlan(List<Segment> Drop, List<SegmentCut> Cuts);

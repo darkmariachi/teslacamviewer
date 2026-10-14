@@ -86,6 +86,30 @@ public class TimelineTests
     }
 
     [Fact]
+    public void Keeping_a_range_drops_the_segments_outside_it_and_cuts_the_ones_at_its_edges()
+    {
+        var ev = EventWith(("2026-10-13T15:25:00", 60), ("2026-10-13T15:26:00", 60), ("2026-10-13T15:27:00", 60), ("2026-10-13T15:28:00", 60));
+
+        var plan = Timeline.KeepRange(ev, 75, 150);
+
+        Assert.Equal([0, 3], plan.Drop.Select(s => s.Index));
+        Assert.Equal(2, plan.Cuts.Count);
+        Assert.Equal((1, 15d, (double?)null), (plan.Cuts[0].Segment.Index, plan.Cuts[0].From, plan.Cuts[0].To));
+        Assert.Equal((2, 0d, (double?)30), (plan.Cuts[1].Segment.Index, plan.Cuts[1].From, plan.Cuts[1].To));
+    }
+
+    [Fact]
+    public void Keeping_a_range_on_segment_boundaries_only_drops_whole_segments()
+    {
+        var ev = EventWith(("2026-10-13T15:25:00", 60), ("2026-10-13T15:26:00", 59.8), ("2026-10-13T15:27:00", 60));
+
+        var plan = Timeline.KeepRange(ev, 60.2, 119.6);
+
+        Assert.Equal([0, 2], plan.Drop.Select(s => s.Index));
+        Assert.Empty(plan.Cuts);
+    }
+
+    [Fact]
     public void Trimming_leaves_events_alone_when_there_is_no_trigger_or_the_window_misses_the_recording()
     {
         var ev = EventWith(("2026-10-13T15:25:00", 60), ("2026-10-13T15:26:00", 60));

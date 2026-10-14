@@ -22,7 +22,7 @@ export default function EventPage() {
   const queryClient = useQueryClient()
   const [range, setRange] = useState<[number, number] | null>(null)
   const [exportCamera, setExportCamera] = useState('grid')
-  const [dialog, setDialog] = useState<'collect' | 'trim' | 'trash' | { segment: number } | null>(null)
+  const [dialog, setDialog] = useState<'collect' | 'trim' | 'trash' | 'keep' | { segment: number } | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -159,6 +159,9 @@ export default function EventPage() {
                 }
               >
                 Export
+              </Button>
+              <Button icon={<Scissors className="size-4" />} onClick={() => setDialog('keep')}>
+                Keep only this
               </Button>
             </Card>
           )}
@@ -416,6 +419,23 @@ export default function EventPage() {
           onClose={() => setDialog(null)}
         />
       )}
+      {dialog === 'keep' && range && (
+        <ConfirmDialog
+          title="Keep only this part of the event?"
+          message={`Every camera's footage outside ${formatClock(range[0])} – ${formatClock(range[1])} moves to the trash folder (about ${formatBytes(bytesOutside(detail, range))}), and the event is rebuilt from what's left. Cuts land on the nearest keyframe, so a second or two more may stay. The space is freed when the trash is emptied.`}
+          confirmLabel="Keep this part"
+          danger
+          onConfirm={async () => {
+            await api.keepRange(id, range[0], range[1])
+            setRange(null)
+            // The event is reindexed in the background; give it a moment before reloading.
+            await new Promise((r) => setTimeout(r, 1500))
+            await refresh()
+            queryClient.invalidateQueries({ queryKey: ['events'] })
+          }}
+          onClose={() => setDialog(null)}
+        />
+      )}
       {dialog === 'trim' && detail.trim && (
         <ConfirmDialog
           title="Trim this event to the trigger?"
@@ -449,6 +469,19 @@ export default function EventPage() {
       )}
     </div>
   )
+}
+
+/** Roughly what keeping only a range removes: each segment's files, in proportion to the time cut from it. */
+function bytesOutside(detail: EventDetail, [start, end]: [number, number]) {
+  let at = 0
+  let bytes = 0
+  for (const seg of detail.segments) {
+    const kept = Math.max(0, Math.min(end, at + seg.durationSec) - Math.max(start, at))
+    const size = seg.files.reduce((sum, f) => sum + f.sizeBytes, 0)
+    bytes += seg.durationSec > 0 ? size * (1 - kept / seg.durationSec) : 0
+    at += seg.durationSec
+  }
+  return bytes
 }
 
 function Fact({ label, value }: { label: string; value: string }) {

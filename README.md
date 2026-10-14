@@ -242,6 +242,9 @@ website can open, so they can't be shown here.
 - **Player.** Click any camera to make it the main view, or switch to the merged grid. Playback starts just
   before the trigger, which is marked on the timeline.
 - **Exporting.** The scissors pick a range on the timeline; export it from one camera or as a grid.
+- **Keeping only part of an event.** With a range picked, "Keep only this" cuts every camera's clips down to
+  it to save space. The footage outside moves to the trash folder; the cut is made without re-encoding, so it
+  lands on a keyframe and may keep a second or two more than asked.
 - **Trimming.** Newer cars save ten minutes of lead-up with every Sentry event. An event's menu, or Trim in
   selection mode, keeps only the minutes around the trigger (two before and one after by default) and moves
   the rest to the trash folder.
@@ -329,7 +332,8 @@ teslausb and the webhook.
 
 ## Where things are stored
 
-Your clips are only changed when you ask: deleting, trimming, or clearing the drive after an import. Everything
+Your clips are only changed when you ask: deleting, trimming, keeping only part of an event, or clearing the
+drive after an import. Everything
 the app makes lives in its data folder: `/data` for the server, `%APPDATA%\TeslaCam Viewer\data` on Windows and
 `~/.config/TeslaCam Viewer/data` on Linux for the desktop app.
 
@@ -343,7 +347,7 @@ the app makes lives in its data folder: `/data` for the server, `%APPDATA%\Tesla
 | `cache/events/<id>/t_<n>.mp4`   | H.264 copies of HEVC clips                              |
 | `cache/exports/`                | Exported clips                                          |
 
-Deleted and trimmed clips go to `.trash/` inside the clip folder. The desktop app also keeps `config.json` (its
+Deleted, trimmed and cut clips go to `.trash/` inside the clip folder. The desktop app also keeps `config.json` (its
 library folder and window position) and `logs/` next to the data folder. Each library folder it has used gets
 its own data folder (`data`, then `data-<id>`), listed in `config.json`. [PRIVACY.md](PRIVACY.md) lists
 everything the app stores and connects to.
