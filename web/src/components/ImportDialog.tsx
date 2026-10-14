@@ -159,7 +159,11 @@ function BrowserImport() {
               {check.alreadyThere > 0 && <span className="text-dim"> {check.alreadyThere.toLocaleString()} are already in the library.</span>}
             </p>
           )}
-          {check.ignored > 0 && <p className="text-xs text-faint">{check.ignored.toLocaleString()} files that aren't Tesla clips will be left out.</p>}
+          {check.ignored > 0 && (
+            <p className="text-xs text-faint">
+              {check.ignored === 1 ? "1 file that isn't a Tesla clip" : `${check.ignored.toLocaleString()} files that aren't Tesla clips`} will be left out.
+            </p>
+          )}
           <div className="flex gap-2">
             {check.missing.length > 0 && (
               <Button variant="primary" icon={<Upload className="size-4" />} onClick={upload}>
@@ -188,7 +192,7 @@ function BrowserImport() {
 
       {phase === 'done' && (
         <Done>
-          Uploaded {uploaded.toLocaleString()} files. New events appear in the library within a minute, and thumbnails follow
+          Uploaded {uploaded === 1 ? '1 file' : `${uploaded.toLocaleString()} files`}. New events appear in the library within two minutes, and thumbnails follow
           shortly after.
         </Done>
       )}
@@ -351,7 +355,8 @@ function Finished({ status }: { status: ImportStatus }) {
     <Done>
       {status.canceled ? 'The last import was stopped after' : 'Last import:'} {status.doneFiles.toLocaleString()} files copied
       {status.failed > 0 && `, ${status.failed} could not be read`}
-      {status.deleteAfter && `, ${status.deleted.toLocaleString()} cleared from the drive`}. It's safe to unplug the drive.
+      {status.deleteAfter && `, ${status.deleted.toLocaleString()} cleared from the drive`}. It's safe to unplug the drive; new events
+      appear within two minutes.
     </Done>
   )
 }

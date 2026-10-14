@@ -3,25 +3,34 @@
 
   <h1>TeslaCam Viewer</h1>
 
-  <h3>Your Tesla's Sentry and dashcam clips, in a fast self-hosted library.</h3>
+  <h3>Your Tesla's Sentry and dashcam clips, with every camera in sync.</h3>
 
   <p>
-    <img src="https://img.shields.io/badge/self--hosted-Docker-e82127" alt="Self-hosted with Docker">
-    <img src="https://img.shields.io/badge/.NET-10-e82127" alt=".NET 10">
-    <img src="https://img.shields.io/badge/React-19-e82127" alt="React 19">
-    <img src="https://img.shields.io/badge/teslausb-optional-e82127" alt="teslausb optional">
+    <a href="https://darkmariachi.github.io/teslacamviewer/"><img src="https://img.shields.io/badge/Download-for%20Windows%20and%20Linux-e82127?style=for-the-badge" alt="Download TeslaCam Viewer"></a>
+  </p>
+
+  <p>
+    <a href="https://github.com/darkmariachi/teslacamviewer/actions/workflows/ci.yml"><img src="https://github.com/darkmariachi/teslacamviewer/actions/workflows/ci.yml/badge.svg" alt="Checks"></a>
+    <img src="https://img.shields.io/badge/desktop-Windows%20%7C%20Linux-e82127" alt="Windows and Linux">
+    <img src="https://img.shields.io/badge/server-Docker-e82127" alt="Docker">
+    <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-e82127" alt="MIT licence"></a>
   </p>
 </div>
 
 # Overview
 
-TeslaCam Viewer turns the folder of clips your Tesla records into a library you can browse from any browser,
-phone included. Every event becomes one continuous video with all cameras in sync, on a map, searchable, and
-cleaned up for you when you want it to be.
+TeslaCam Viewer turns the clips your Tesla records into a library you can actually use. Every event becomes one
+continuous video with all cameras in sync and the trigger marked, placed on a map, searchable, and cleaned up for
+you when you want it to be.
 
-It runs on your own server or NAS with Docker. Point it at the folder where your clips end up, whether you copy
-the USB drive by hand or archive it automatically with [teslausb](https://github.com/marcone/teslausb).
-Nothing leaves your network except map tiles.
+There are two ways to run it, from the same code:
+
+- **The desktop app** for Windows and Linux. Install it, plug the car's USB drive in, press Import. Nothing else to
+  set up.
+- **The server** for a NAS or home server, with Docker. Open it from any browser, phone included, and pair it with
+  [teslausb](https://github.com/marcone/teslausb) so clips upload by themselves when the car gets home.
+
+Your clips stay on your own computer. There is no account, no cloud and no telemetry.
 
 > **v2** is a full rewrite (.NET 10, React, SQLite, ffmpeg). The original .NET 5 / Angular app is still
 > available in the [earlier history](../../tree/152f739).
@@ -34,6 +43,7 @@ Nothing leaves your network except map tiles.
 
 - Every Sentry event, saved clip and drive as a card with a thumbnail, reason, place and time
 - One timeline per event instead of one-minute files, with every camera playing in sync and the trigger marked
+- Import from the car's USB drive, skipping what you already have, and optionally clear the drive afterwards
 - Hover a card to play the car's own few seconds around the trigger, on cars new enough to save them
 - Merged grid videos that play well on a phone and are easy to share, plus clip export from any range
 - Trim long Sentry events down to the minutes around the trigger
@@ -42,8 +52,8 @@ Nothing leaves your network except map tiles.
 - Safe deletion through a trash folder next to your clips, restorable until it expires
 - Optional [teslausb](https://github.com/marcone/teslausb) integration: see when the car is home, follow uploads,
   and clean up Sentry events recorded at home
-- Hardware encoding on Intel graphics, with a software fallback
-- No telemetry and no account besides your own password
+- Hardware encoding on NVIDIA, AMD, Intel and Apple graphics, with a software fallback
+- A built-in guide (Help) for everything below
 
 ## Screenshots
 
@@ -70,80 +80,92 @@ Nothing leaves your network except map tiles.
 
 ## Status
 
-v2 is new. It is in use with a 2023 Model Y archived by teslausb on a Raspberry Pi 5; here is what has and has
-not been tried.
+v2 is new. The server is in use with a 2023 Model Y archived by teslausb on a Raspberry Pi 5; the desktop app has
+been run on Windows 11. Here is what has and has not been tried.
 
-| Area                                                          | State                                         |
-| ------------------------------------------------------------- | --------------------------------------------- |
-| Library, player, map, insights, collections, notes            | Works                                         |
-| Merged videos, clip export, trimming                          | Works                                         |
-| Deleting, trash and restoring                                 | Works                                         |
-| The car's own event clip on hover                             | Works                                         |
-| teslausb status, upload notifications and "Upload now"        | Works                                         |
-| Cleaning up Sentry events recorded at home                    | Built and tested; new                         |
-| Intel hardware encoding                                       | Built; falls back to software when missing    |
-| Six-camera cars (pillar cameras)                              | Built; tried with generated clips only        |
-| HEVC clips                                                    | Built; not yet tried with real HEVC footage   |
-| Prebuilt Docker image for v2                                  | Published once v2 reaches `main`              |
+| Area                                                        | State                                          |
+| ----------------------------------------------------------- | ---------------------------------------------- |
+| Library, player, map, insights, collections, notes          | Works                                          |
+| Merged videos, clip export, trimming                        | Works                                          |
+| Deleting, trash and restoring                               | Works                                          |
+| Importing in a browser, and from a drive in the desktop app | Works                                          |
+| The car's own event clip on hover                           | Works                                          |
+| teslausb status, upload notifications and "Upload now"      | Works                                          |
+| Desktop app on Windows                                      | Works                                          |
+| NVIDIA and AMD hardware encoding (Windows)                  | Works                                          |
+| Cleaning up Sentry events recorded at home                  | Built and tested; new                          |
+| Desktop app on Linux                                        | Built by CI; not yet tried on a Linux desktop  |
+| Intel hardware encoding (VAAPI on Linux, Quick Sync)        | Built; falls back to software when missing     |
+| Six-camera cars (pillar cameras)                            | Built; tried with generated clips only         |
+| HEVC clips                                                  | Built; not yet tried with real HEVC footage    |
+| macOS                                                       | Not yet: needs Apple code signing              |
 
 If you try one of the rows that is not marked "Works", an issue saying how it went is very welcome.
 
 ## Contents
 
-- [Status](#status) · [Requirements](#requirements) · [Install](#install) · [First run](#first-run) ·
-  [Folder layout](#folder-layout)
+- [Status](#status) · [Desktop app](#desktop-app) · [Server](#server) · [Getting clips in](#getting-clips-in)
 - [Using it](#using-it) · [Keyboard shortcuts](#keyboard-shortcuts) · [teslausb](#teslausb) ·
-  [Sentry at home](#sentry-at-home)
-- [Settings](#settings) · [Reverse proxy](#reverse-proxy) · [Where things are stored](#where-things-are-stored) ·
+  [Sentry at home](#sentry-at-home) · [Using it from a phone](#using-it-from-a-phone)
+- [Settings](#settings) · [Where things are stored](#where-things-are-stored) ·
   [Troubleshooting](#troubleshooting)
 - [Relationship to other projects](#relationship-to-other-projects) · [Development](#development)
 
-## Requirements
+## Desktop app
 
-- A computer that stays on and runs Docker, such as a home server or NAS. It has been used on x86-64 Linux.
-- The folder your clips are copied to. teslausb is optional; a copy of the USB drive works the same way.
-- Disk space for derived files. Thumbnails are small; merged videos are smaller than the originals, and you
-  choose which events get one.
+Get it from the [download page](https://darkmariachi.github.io/teslacamviewer/) or the
+[latest release](https://github.com/darkmariachi/teslacamviewer/releases/latest).
 
-ffmpeg is included in the image.
+**Windows 10 or 11**
 
-## Install
+- `TeslaCam-Viewer-<version>-setup.exe` installs for the current user and adds a Start menu entry.
+- `TeslaCam-Viewer-<version>-portable.exe` runs without installing.
 
-Until the v2 image is published, build it from a clone of this repository:
+The builds are not code-signed, so Windows SmartScreen shows a warning the first time. Choose "More info", then
+"Run anyway".
 
-```bash
-git clone -b v2 https://github.com/darkmariachi/teslacamviewer.git
-cd teslacamviewer
-cp docker-compose.example.yml docker-compose.yml   # then edit the paths, see below
-docker compose up -d --build
-```
+**Linux (64-bit)**
 
-The compose file:
+- `TeslaCam-Viewer-<version>-x86_64.AppImage`: make it executable (`chmod +x`) and run it.
+- `TeslaCam-Viewer-<version>-x64.tar.gz`: unpack anywhere and run `teslacam-viewer` inside.
+
+Clips are kept in `Videos/TeslaCam Viewer` unless you choose another folder in Admin → Library. The app includes
+everything it needs, ffmpeg included, and updates itself from GitHub releases (the Windows installer and the
+AppImage).
+
+The desktop app only answers on the computer it runs on. To watch from a phone or another computer, use the
+server.
+
+## Server
+
+You need a computer that stays on and runs Docker, such as a home server or NAS. It has been used on x86-64
+Linux.
 
 ```yaml
 services:
   teslacamviewer:
-    build: .                     # or, once published: image: ghcr.io/darkmariachi/teslacamviewer:latest
+    image: ghcr.io/darkmariachi/teslacamviewer:latest
     container_name: teslacamviewer
     restart: unless-stopped
     user: "1000:1000"            # the user that owns the clips
     environment:
       - TZ=America/Chicago
     volumes:
-      - /path/to/teslacam:/teslacam   # contains SentryClips/ and SavedClips/
+      - /path/to/teslacam:/teslacam   # where clips are kept: SentryClips/, SavedClips/, RecentClips/
       - ./data:/data                  # database, thumbnails, merged videos
     ports:
       - 7544:8080
-    devices:                     # optional: Intel hardware encoding
+    devices:                     # optional: Intel or AMD hardware encoding
       - /dev/dri:/dev/dri
     group_add:
       - "993"                    # host's render group id: getent group render
 ```
 
-[`docker-compose.example.yml`](docker-compose.example.yml) has the same file with comments. Remove the
-`devices` and `group_add` blocks if the machine has no Intel graphics.
+[`docker-compose.example.yml`](docker-compose.example.yml) has the same file with comments. Remove the `devices`
+and `group_add` blocks if the machine has no graphics chip to pass through. To build the image yourself instead,
+clone this repository and replace `image:` with `build: .`.
 
-## First run
+Then:
 
 1. Open `http://<host>:7544` and choose a password. First-time setup is only accepted from the local network,
    so it is safe to put the app behind a reverse proxy before you have done it.
@@ -152,21 +174,40 @@ services:
 3. Admin → Processing shows how far along it is. Admin → Settings sets which events get merged videos, the
    quality, and the hours heavy work is allowed to run.
 
-## Folder layout
+### Reverse proxy
 
-The mounted folder should look like what the car (or teslausb) writes:
+The app trusts `X-Forwarded-For` and `X-Forwarded-Proto` from private addresses, so a proxy on the same host or
+LAN works without extra configuration. Video is served with range requests; make sure the proxy does not buffer
+whole responses. Importing in the browser uploads clips of 30 to 40 MB each, so allow request bodies that large.
+
+## Getting clips in
+
+Your Tesla records onto the USB drive in the glovebox, in a folder called `TeslaCam`. There are three ways to
+bring the clips in:
+
+1. **Import from the USB drive.** Choose **Import** on the Events page. In the desktop app, a plugged-in drive is
+   listed by itself, and its clips can be cleared afterwards so the car has room again. In a browser, choose the
+   drive or its `TeslaCam` folder and the new clips are uploaded to the server. Clips already in the library are
+   skipped either way.
+2. **Automatically, with teslausb.** See [teslausb](#teslausb).
+3. **Copy the folders yourself** into the clip folder (the server's `/teslacam`, or the desktop app's library
+   folder). It is checked every five minutes; Admin → Library → "Scan now" checks straight away.
+
+The clip folder looks like what the car writes:
 
 ```
-/teslacam
+TeslaCam
 ├── SentryClips/2026-10-13_15-36-30/2026-10-13_15-35-32-front.mp4 …  event.json  event.mp4
 ├── SavedClips/…
 └── RecentClips/…            (optional; grouped into drives)
 ```
 
-A copy of the USB drive with a top-level `TeslaCam/` folder works too. `event.json` is optional; without it an
-event simply has no reason, place or map location. Folders still being written are left alone for 90 seconds.
+A copy of the whole drive, with the top-level `TeslaCam/` folder, works too. `event.json` is optional; without it
+an event simply has no reason, place or map location. Folders still being written are left alone for 90 seconds.
 
-Mount the folder read-write if you want to delete or trim from the app. Read-only works for viewing.
+**Turn off the car's dashcam encryption.** Newer Tesla software can encrypt recordings (Controls → Safety →
+Encrypt Dashcam Recordings). Encrypted clips go into an `EncryptedClips` folder that only the car or Tesla's
+website can open, so they can't be shown here.
 
 ## Using it
 
@@ -183,6 +224,8 @@ Mount the folder read-write if you want to delete or trim from the app. Read-onl
   always keeping favorites and anything in a collection.
 - **Webhook.** Admin → Settings can send a JSON POST to an address of your choice, such as a Home Assistant
   webhook, whenever a new Sentry event arrives.
+- **Help.** The app's own guide covers all of this, with the details that differ between the desktop app and
+  the server.
 
 ## Keyboard shortcuts
 
@@ -198,12 +241,14 @@ Mount the folder read-write if you want to delete or trim from the app. Read-onl
 
 ## teslausb
 
-The Car tab in Admin follows a [teslausb](https://github.com/marcone/teslausb) device without changing teslausb
-itself:
+[teslausb](https://github.com/marcone/teslausb) runs on a Raspberry Pi plugged into the car instead of a USB
+drive, and copies new clips to a shared folder whenever the car is on your home Wi-Fi. Point the server's
+`/teslacam` at that share. The app follows the device without changing teslausb itself:
 
-1. In **Admin → Car**, enter the address of the teslausb web page (for example `http://teslausb.local`). The
+1. Turn on **Admin → Settings → teslausb**. A Car tab appears in Admin.
+2. In **Admin → Car**, enter the address of the teslausb web page (for example `http://teslausb.local`). The
    app polls its status report every 30 seconds; whenever it answers, the car is on the home network.
-2. Copy the two lines shown there into `teslausb_setup_variables.conf` and re-run teslausb's setup:
+3. Copy the two lines shown there into `teslausb_setup_variables.conf` and re-run teslausb's setup:
 
    ```bash
    export WEBHOOK_ENABLED=true
@@ -226,69 +271,87 @@ upload. Leaving Sentry on at home keeps the port powered, but records everyone w
 
 Sentry events within the radius of home then move to the trash once they are that old, and the webhook stops
 announcing them. Favorites, events in a collection, saved clips and bumps (something touched the car) are always
-kept.
+kept. This works without teslausb too.
+
+## Using it from a phone
+
+The server works on phones; open the same address on your home network, and add it to the home screen to open
+it like an app. Away from home, the safest way in is a private network such as [Tailscale](https://tailscale.com)
+on the server and the phone, so nothing is opened to the internet. If you would rather publish it, put it behind
+a reverse proxy with HTTPS. The app has a password and slows down repeated wrong guesses, but footage of your car
+and its surroundings deserves care.
+
+The desktop app only answers on its own computer.
 
 ## Settings
 
-Set in the compose file:
+The server reads these from the compose file:
 
-| Variable                      | Default                | Purpose                                                    |
-| ----------------------------- | ---------------------- | ---------------------------------------------------------- |
-| `TESLACAM_ROOT`               | `/teslacam`            | Folder with the clips                                      |
-| `TESLACAM_DATA`               | `/data`                | Database, login keys and derived files                     |
-| `TESLACAM_CACHE`              | `$TESLACAM_DATA/cache` | Put thumbnails and merged videos on another disk           |
+| Variable                      | Default                | Purpose                                                        |
+| ----------------------------- | ---------------------- | -------------------------------------------------------------- |
+| `TESLACAM_ROOT`               | `/teslacam`            | Folder with the clips                                          |
+| `TESLACAM_DATA`               | `/data`                | Database, login keys and derived files                         |
+| `TESLACAM_CACHE`              | `$TESLACAM_DATA/cache` | Put thumbnails and merged videos on another disk               |
 | `TESLACAM_PASSWORD`           | –                      | Preset the password on first start instead of the setup screen |
-| `TESLACAM_ALLOW_REMOTE_SETUP` | `false`                | Allow first-time setup from outside the local network      |
-| `TZ`                          | UTC                    | Used for working hours and "recent" rules                  |
+| `TESLACAM_ALLOW_REMOTE_SETUP` | `false`                | Allow first-time setup from outside the local network          |
+| `TESLACAM_FFMPEG`             | –                      | Folder with `ffmpeg` and `ffprobe`, instead of the `PATH`      |
+| `TZ`                          | UTC                    | Used for working hours and "recent" rules                      |
 
-Everything else is in Admin → Settings: merged videos (which events, resolution, quality, frame rate,
-encoder), working hours, HEVC copies, scan interval, trash retention, trimming, Sentry at home and the webhook.
-
-## Reverse proxy
-
-The app trusts `X-Forwarded-For` and `X-Forwarded-Proto` from private addresses, so a proxy on the same host
-or LAN works without extra configuration. Video is served with range requests; make sure the proxy does not
-buffer whole responses.
+Everything else is in Admin → Settings, in both versions: merged videos (which events, resolution, quality,
+frame rate, encoder), working hours, HEVC copies, scan interval, trash retention, trimming, Sentry at home,
+teslausb and the webhook.
 
 ## Where things are stored
 
-Your clips are never modified. Everything the app makes lives in `/data`:
+Your clips are only changed when you ask: deleting, trimming, or clearing the drive after an import. Everything
+the app makes lives in its data folder: `/data` for the server, `%APPDATA%\TeslaCam Viewer\data` on Windows and
+`~/.config/TeslaCam Viewer/data` on Linux for the desktop app.
 
-| Path                           | Contents                                                  |
-| ------------------------------ | --------------------------------------------------------- |
-| `teslacam.db`                  | The index, notes, collections, settings and job history   |
-| `keys/`                        | Keys that sign login cookies                              |
-| `cache/events/<id>/thumb.jpg`  | Thumbnails                                                |
-| `cache/events/<id>/preview.mp4`| Merged grid videos                                        |
-| `cache/events/<id>/event.mp4`  | Browser-playable copies of the car's own event clips      |
-| `cache/events/<id>/t_<n>.mp4`  | H.264 copies of HEVC clips                                |
-| `cache/exports/`               | Exported clips                                            |
+| Path                            | Contents                                                |
+| ------------------------------- | ------------------------------------------------------- |
+| `teslacam.db`                   | The index, notes, collections, settings and job history |
+| `keys/`                         | Keys that sign login cookies                            |
+| `cache/events/<id>/thumb.jpg`   | Thumbnails                                              |
+| `cache/events/<id>/preview.mp4` | Merged grid videos                                      |
+| `cache/events/<id>/event.mp4`   | Browser-playable copies of the car's own event clips    |
+| `cache/events/<id>/t_<n>.mp4`   | H.264 copies of HEVC clips                              |
+| `cache/exports/`                | Exported clips                                          |
 
-Deleted and trimmed clips go to `.trash/` inside the clip folder, not to `/data`.
+Deleted and trimmed clips go to `.trash/` inside the clip folder. The desktop app also keeps `config.json` (its
+library folder and window position) and `logs/` next to the data folder. [PRIVACY.md](PRIVACY.md) lists
+everything the app stores and connects to.
 
 ## Troubleshooting
 
 **New clips don't show up.**
-The folder is scanned every five minutes (Admin → Settings), and folders still being written are skipped for
-90 seconds. Admin → Library → "Scan now" runs one immediately. Check that the mounted folder contains
-`SentryClips`, `SavedClips` or `RecentClips`, or a `TeslaCam` folder that does.
+Folders still being written are skipped for 90 seconds, and the folder is checked every five minutes.
+Admin → Library → "Scan now" runs a scan immediately and shows an error if the clip folder can't be read. Check
+that it contains `SentryClips`, `SavedClips` or `RecentClips`, or a `TeslaCam` folder that does.
+
+**There is an `EncryptedClips` folder and nothing plays.**
+The car's dashcam encryption is on; see [Getting clips in](#getting-clips-in).
 
 **Deleting or trimming fails.**
-The clip folder is mounted read-only, or the container runs as a user that can't write to it. Set `user:` to the
-owner of the clips (`id -u` and `id -g` on the host).
+The clip folder is read-only, or (on the server) the container runs as a user that can't write to it. Set
+`user:` to the owner of the clips (`id -u` and `id -g` on the host).
 
 **A clip doesn't play.**
 Some cars record in HEVC, which not every browser plays. The event page offers "Make compatible copies", or set
 Admin → Settings to make them automatically.
 
 **Merging is slow.**
-Without hardware encoding every merge runs on the processor. Pass `/dev/dri` through and add the host's
-`render` group id (`getent group render`), or lower the merged video resolution. Working hours keep heavy work
-to the night.
+Admin → Processing shows whether a graphics chip is used. On the server, pass `/dev/dri` through and add the
+host's `render` group id (`getent group render`). Lowering the merged video resolution or limiting work to set
+hours also helps.
 
-**The Car tab says the car is away.**
-The app reaches teslausb only while the car is on the home network. If it is home, check that the address in
-Admin → Car opens teslausb's web page from the server.
+**The desktop app says it couldn't start.**
+The message names the log file (File → Open the log folder). An issue with that log attached is the quickest
+way to a fix.
+
+**The Car tab is missing, or says the car is away.**
+The Car tab only shows when teslausb is turned on in Admin → Settings. The app reaches teslausb only while the
+car is on the home network; if it is home, check that the address in Admin → Car opens teslausb's web page from
+the server.
 
 ## Relationship to other projects
 
@@ -296,9 +359,13 @@ TeslaCam Viewer is an independent project. It is not affiliated with, or endorse
 project. It reads the files a Tesla writes and, if you set it up, talks to a teslausb device through the status
 page and webhook teslausb already has.
 
-- Video work is done by [ffmpeg](https://ffmpeg.org), included in the Docker image.
+- Video work is done by [ffmpeg](https://ffmpeg.org): an LGPL build ships with the desktop app, and the Docker
+  image installs Debian's.
 - The map uses [MapLibre](https://maplibre.org) with tiles from [OpenFreeMap](https://openfreemap.org), based
-  on OpenStreetMap data. Map tiles are the only thing your browser fetches from outside your network.
+  on OpenStreetMap data.
+- Privacy: see [PRIVACY.md](PRIVACY.md). There is no telemetry.
+- Licence: MIT, see [LICENSE](LICENSE). Bundled software is listed in
+  [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Development
 
@@ -321,18 +388,44 @@ Create `server/appsettings.Development.json` (git-ignored) to point at some samp
 { "TESLACAM_ROOT": "C:/clips/sample", "TESLACAM_DATA": "C:/clips/devdata" }
 ```
 
-| Command                                  | What it does                                               |
-| ---------------------------------------- | ---------------------------------------------------------- |
-| `dotnet test`                            | Server tests, from the repository root                     |
-| `npm run dev`                            | Web app with hot reload                                    |
-| `npm run build`                          | Type-check and build the web app into `server/wwwroot`     |
-| `npm run lint`                           | Lint the web app                                           |
-| `docker compose up -d --build`           | Build and run the container                                |
+| Command                                    | What it does                                                    |
+| ------------------------------------------ | --------------------------------------------------------------- |
+| `dotnet test`                              | Server tests, from the repository root                          |
+| `npm run dev` (in `web/`)                  | Web app with hot reload                                         |
+| `npm run build` (in `web/`)                | Type-check and build the web app into `server/wwwroot`          |
+| `npm run lint` (in `web/`)                 | Lint the web app                                                |
+| `npm run fetch-ffmpeg` (in `desktop/`)     | Download an LGPL ffmpeg build into `desktop/resources/ffmpeg`   |
+| `npm start` (in `desktop/`)                | Run the desktop app (after `npm run prepare-server`)            |
+| `npm run dist` / `dist:linux` (in `desktop/`) | Build the Windows or Linux installers into `desktop/dist`    |
+| `docker compose up -d --build`             | Build and run the server container                              |
+
+For a local desktop build with an ffmpeg you already have, set `FFMPEG_DIR` to its folder instead of running
+`fetch-ffmpeg`. Set `TESLACAM_USER_DATA` to run the desktop app with a separate profile, away from your real
+library.
+
+### Checks and releases
+
+Four GitHub Actions workflows live in `.github/workflows`:
+
+- **Checks** runs the server tests, the web app's lint and build, and the desktop app's type check for every push
+  to `develop` or `main` and every pull request.
+- **Build desktop app** builds the Windows and Linux installers. It runs by hand from the Actions tab, for pull
+  requests that touch `desktop/`, and for tags such as `v2.0.0`, which also create a draft release with the
+  files attached.
+- **Build and publish the Docker image** publishes `ghcr.io/darkmariachi/teslacamviewer` for pushes to `main` and
+  for version tags.
+- **Website** publishes `site/` to the [download page](https://darkmariachi.github.io/teslacamviewer/) when it
+  changes. The page finds the newest release by itself.
 
 ### Layout
 
 - `server/Api`: the HTTP endpoints, one file per area.
-- `server/Services`: scanning, the job queue and ffmpeg work, trash and trimming, teslausb, home clean-up.
+- `server/Services`: scanning, importing, the job queue and ffmpeg work, trash and trimming, teslausb, home
+  clean-up, and desktop mode.
 - `server/Data`: the SQLite model and its migrations.
 - `web/src`: the React app; `pages/` per screen, `components/` shared, `api.ts` the typed client.
-- `tests`: scanner, timeline, archiver and home clean-up tests against throwaway folders and databases.
+- `desktop/`: the Electron app. It runs a self-contained build of the server on a private local port and shows
+  the web app in its window; the window signs in with a secret cookie, so there is no password.
+- `site/`: the download page.
+- `tests`: scanner, import, timeline, archiver, desktop sign-in and home clean-up tests against throwaway folders
+  and databases.

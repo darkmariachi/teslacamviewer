@@ -197,6 +197,16 @@ public partial class ImportService(AppPaths paths, Scanner scanner, ILogger<Impo
 
     public void Cancel() => _cts?.Cancel();
 
+    /// <summary>
+    /// Looks for the new folders now, and once more after the scanner's settle time, since it skips folders
+    /// that changed in the last minute and a half.
+    /// </summary>
+    public void ScanSoon()
+    {
+        scanner.RequestScan();
+        _ = Task.Delay(TimeSpan.FromSeconds(100)).ContinueWith(_ => scanner.RequestScan(), TaskScheduler.Default);
+    }
+
     private async Task CopyAsync(string root, List<(string Full, ImportFile File)> files, ImportState state, CancellationToken ct)
     {
         var copied = new List<string>();
@@ -273,7 +283,7 @@ public partial class ImportService(AppPaths paths, Scanner scanner, ILogger<Impo
         {
             state.Running = false;
             state.FinishedUtc = DateTime.UtcNow;
-            scanner.RequestScan();
+            ScanSoon();
         }
     }
 

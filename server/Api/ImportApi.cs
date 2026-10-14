@@ -29,9 +29,9 @@ public static class ImportApi
         }));
 
         // The browser is done sending; look at the new folders now rather than at the next scheduled scan.
-        group.MapPost("/finish", (Scanner scanner) =>
+        group.MapPost("/finish", (ImportService import) =>
         {
-            scanner.RequestScan();
+            import.ScanSoon();
             return Results.Ok();
         });
 
