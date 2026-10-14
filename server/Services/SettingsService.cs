@@ -21,6 +21,13 @@ public record AppSettings
     public int TrimBeforeSec { get; init; } = 120;
     /// <summary>…and this many after it.</summary>
     public int TrimAfterSec { get; init; } = 60;
+    /// <summary>Where the car is parked at home; events within <see cref="HomeRadiusM"/> of it count as home events.</summary>
+    public double? HomeLat { get; init; }
+    public double? HomeLon { get; init; }
+    public int HomeRadiusM { get; init; } = 100;
+    /// <summary>Move Sentry events recorded at home to the trash once they are <see cref="HomeCleanupDays"/> old.</summary>
+    public bool HomeCleanupEnabled { get; init; }
+    public int HomeCleanupDays { get; init; } = 3;
     /// <summary>0 lets ffmpeg decide.</summary>
     public int FfmpegThreads { get; init; }
     /// <summary>auto | software | vaapi</summary>
@@ -46,6 +53,10 @@ public record AppSettings
         TrashRetentionDays = Math.Clamp(TrashRetentionDays, 0, 365),
         TrimBeforeSec = Math.Clamp(TrimBeforeSec, 0, 3600),
         TrimAfterSec = Math.Clamp(TrimAfterSec, 0, 3600),
+        HomeLat = HomeLat is >= -90 and <= 90 && HomeLon is >= -180 and <= 180 ? HomeLat : null,
+        HomeLon = HomeLat is >= -90 and <= 90 && HomeLon is >= -180 and <= 180 ? HomeLon : null,
+        HomeRadiusM = Math.Clamp(HomeRadiusM, 20, 2000),
+        HomeCleanupDays = Math.Clamp(HomeCleanupDays, 1, 365),
         FfmpegThreads = Math.Clamp(FfmpegThreads, 0, 64),
         PreviewCellHeight = PreviewCellHeight is 240 or 360 or 480 or 720 ? PreviewCellHeight : 480,
         PreviewFps = Math.Clamp(PreviewFps, 10, 60),

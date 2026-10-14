@@ -77,6 +77,8 @@ export interface EventDetail {
   preview: { url: string; layout: string; durationSec: number; sizeBytes: number } | null
   /** What trimming to the trigger would remove; null when there is nothing to trim. */
   trim: { segments: number; bytes: number; beforeSec: number; afterSec: number } | null
+  /** When the home rule moves this event to the trash; null when it doesn't apply. */
+  homeCleanupAt: string | null
   segments: Segment[]
   collections: { id: number; name: string }[]
   jobs: Job[]
@@ -135,6 +137,11 @@ export interface Settings {
   trashRetentionDays: number
   trimBeforeSec: number
   trimAfterSec: number
+  homeLat: number | null
+  homeLon: number | null
+  homeRadiusM: number
+  homeCleanupEnabled: boolean
+  homeCleanupDays: number
   ffmpegThreads: number
   encoder: 'auto' | 'software' | 'vaapi'
   previewCellHeight: number
@@ -347,6 +354,8 @@ export const api = {
   cancelBacklog: (kind: JobKind) => request<{ removed: number }>('POST', '/api/admin/backlog/cancel', { kind }),
   settings: () => request<Settings>('GET', '/api/admin/settings'),
   saveSettings: (settings: Settings) => request<Settings>('PUT', '/api/admin/settings', settings),
+  homeCleanupPreview: (settings: Settings) =>
+    request<{ covered: number; coveredBytes: number; due: number; dueBytes: number }>('POST', '/api/admin/home-cleanup/preview', settings),
   trash: () => request<EventSummary[]>('GET', '/api/admin/trash'),
   purge: (id: number) => request<void>('DELETE', `/api/admin/trash/${id}`),
   emptyTrash: () => request<{ purged: number }>('DELETE', '/api/admin/trash'),

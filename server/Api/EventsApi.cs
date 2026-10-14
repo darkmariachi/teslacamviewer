@@ -86,8 +86,8 @@ public static class EventsApi
                 .OrderBy(e => e.StartTime).Select(e => (int?)e.Id).FirstOrDefaultAsync();
             var older = await db.Events.Where(e => e.TrashedAt == null && e.StartTime < ev.StartTime)
                 .OrderByDescending(e => e.StartTime).Select(e => (int?)e.Id).FirstOrDefaultAsync();
-            var trimSettings = settings.Current;
-            var outside = Timeline.OutsideTrigger(ev, trimSettings.TrimBeforeSec, trimSettings.TrimAfterSec);
+            var current = settings.Current;
+            var outside = Timeline.OutsideTrigger(ev, current.TrimBeforeSec, current.TrimAfterSec);
 
             return Results.Ok(new
             {
@@ -99,14 +99,16 @@ public static class EventsApi
                 preview = ev.HasPreview
                     ? new { url = $"/api/media/preview/{ev.Id}", layout = ev.PreviewLayout, durationSec = ev.PreviewDurationSec, sizeBytes = ev.PreviewSizeBytes }
                     : null,
+                // Set when the home rule will move this event to the trash, and when.
+                homeCleanupAt = HomeCleanup.DueAt(ev, current),
                 // What trimming to the trigger would remove; null when there is nothing to trim.
                 trim = outside.Count > 0
                     ? new
                     {
                         segments = outside.Count,
                         bytes = outside.Sum(x => x.Files.Sum(f => f.SizeBytes)),
-                        beforeSec = trimSettings.TrimBeforeSec,
-                        afterSec = trimSettings.TrimAfterSec,
+                        beforeSec = current.TrimBeforeSec,
+                        afterSec = current.TrimAfterSec,
                     }
                     : null,
                 segments = ev.Segments.Select(s => new

@@ -136,6 +136,15 @@ public class TrashService(IDbContextFactory<AppDb> dbf, AppPaths paths, Settings
         {
             try
             {
+                var moved = await CleanupHomeAsync();
+                if (moved > 0) log.LogInformation("Moved {Count} Sentry events recorded at home to the trash", moved);
+            }
+            catch (Exception ex)
+            {
+                log.LogWarning("Home cleanup failed: {Message}", ex.Message);
+            }
+            try
+            {
                 await PurgeExpiredAsync();
             }
             catch (Exception ex)
@@ -144,13 +153,41 @@ public class TrashService(IDbContextFactory<AppDb> dbf, AppPaths paths, Settings
             }
             try
             {
-                await Task.Delay(TimeSpan.FromHours(6), stoppingToken);
+                // Hourly, so a home event goes within an hour of its due time.
+                await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
             }
             catch (OperationCanceledException)
             {
                 break;
             }
         }
+    }
+
+    /// <summary>
+    /// Sentry events the home rule covers under the given settings (all of them, or only those already due).
+    /// Favorites and collected events are never included.
+    /// </summary>
+    public async Task<List<Event>> HomeCandidatesAsync(AppSettings s, bool dueOnly)
+    {
+        if (!s.HomeCleanupEnabled || s.HomeLat == null) return [];
+        await using var db = await dbf.CreateDbContextAsync();
+        var located = await db.Events.AsNoTracking()
+            .Where(e => e.TrashedAt == null && e.Type == EventType.Sentry && !e.Favorite && !e.Collections.Any()
+                        && e.Lat != null && e.Lon != null)
+            .ToListAsync();
+        var now = DateTime.Now;
+        return located.Where(e => HomeCleanup.DueAt(e, s) is { } due && (!dueOnly || due <= now)).ToList();
+    }
+
+    public async Task<int> CleanupHomeAsync()
+    {
+        var moved = 0;
+        foreach (var ev in await HomeCandidatesAsync(settings.Current, dueOnly: true))
+        {
+            await TrashAsync(ev.Id);
+            moved++;
+        }
+        return moved;
     }
 
     private async Task PurgeExpiredAsync()

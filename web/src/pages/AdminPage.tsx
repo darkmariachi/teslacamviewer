@@ -536,6 +536,36 @@ function SettingsForm() {
         </Field>
       </Section>
 
+      <Section
+        title="Sentry at home"
+        description="Leaving Sentry on at home keeps the car's USB port powered so uploads finish, but it records everyone who walks past. Those events can clean themselves up."
+      >
+        <Row label="Clean up Sentry events recorded at home" hint="Favorites, events in a collection and bumps (something touched the car) are always kept.">
+          <Toggle label="Clean up home events" checked={draft.homeCleanupEnabled} onChange={(v) => set({ homeCleanupEnabled: v })} />
+        </Row>
+        <Field label="Home location" hint={draft.homeLat == null ? 'Open an event recorded at home and choose "This is home" from its menu.' : undefined}>
+          {draft.homeLat != null && draft.homeLon != null ? (
+            <div className="flex h-10 items-center gap-3">
+              <span className="tabular text-sm">
+                {draft.homeLat.toFixed(5)}, {draft.homeLon.toFixed(5)}
+              </span>
+              <Button size="sm" variant="ghost" onClick={() => set({ homeLat: null, homeLon: null })}>
+                Clear
+              </Button>
+            </div>
+          ) : (
+            <p className="flex h-10 items-center text-sm text-faint">Not set</p>
+          )}
+        </Field>
+        <Field label="Counts as home within">
+          <NumberInput value={draft.homeRadiusM} min={20} max={2000} suffix="metres" onChange={(v) => set({ homeRadiusM: v })} />
+        </Field>
+        <Field label="Move them to the trash after">
+          <NumberInput value={draft.homeCleanupDays} min={1} max={365} suffix="days" onChange={(v) => set({ homeCleanupDays: v })} />
+        </Field>
+        {draft.homeLat != null && <HomeCleanupPreview draft={draft} />}
+      </Section>
+
       <Section title="Notifications" description="Get a call when the car records a new Sentry event, for example into a Home Assistant webhook.">
         <Field label="Webhook URL" hint="Receives a JSON POST with the event's time, place and reason. Leave empty to turn off.">
           <input value={draft.webhookUrl ?? ''} onChange={(e) => set({ webhookUrl: e.target.value || null })} placeholder="https://…" className={inputClass} />
@@ -554,6 +584,34 @@ function SettingsForm() {
         </Button>
       </div>
     </div>
+  )
+}
+
+/** What the home rule covers with the values being edited, so nothing is trashed by surprise on save. */
+function HomeCleanupPreview({ draft }: { draft: Settings }) {
+  const preview = useQuery({
+    queryKey: ['home-cleanup', draft.homeLat, draft.homeLon, draft.homeRadiusM, draft.homeCleanupDays],
+    queryFn: () => api.homeCleanupPreview(draft),
+  })
+  const data = preview.data
+  return (
+    <p className="text-sm text-dim sm:col-span-2">
+      {!data ? (
+        'Counting home events…'
+      ) : (
+        <>
+          {data.covered.toLocaleString()} Sentry {data.covered === 1 ? 'event was' : 'events were'} recorded here ({formatBytes(data.coveredBytes)}).
+          {data.due > 0 && (
+            <span className={cx(draft.homeCleanupEnabled && 'text-warn')}>
+              {' '}
+              {data.due.toLocaleString()} of them ({formatBytes(data.dueBytes)}) {data.due === 1 ? 'is' : 'are'} already older than{' '}
+              {draft.homeCleanupDays} {draft.homeCleanupDays === 1 ? 'day' : 'days'}
+              {draft.homeCleanupEnabled ? ' and move to the trash within an hour of saving.' : '.'}
+            </span>
+          )}
+        </>
+      )}
+    </p>
   )
 }
 

@@ -20,6 +20,9 @@ a fast, phone-friendly library with a synced multi-camera player.
 - **Clip export** – select a range on the timeline and export it from one camera or as a grid.
 - **Trim** – newer cars save ten minutes of lead-up with every Sentry event. Trim cuts an event, or a whole
   selection, down to the minutes around the trigger; how much to keep is set in the Admin panel.
+- **Sentry at home** – leaving Sentry on at home keeps the car's USB port powered so teslausb can finish
+  uploading. Mark an event's location as home and Sentry events recorded there move to the trash after a few
+  days, except favorites, events in a collection and bumps.
 - **Map** – all located events on a clustered map (MapLibre with OpenFreeMap tiles, no API key).
 - **Collections and notes** – group events that belong together and write down what happened.
 - **Insights** – events per month, by hour and weekday, by reason and by place.

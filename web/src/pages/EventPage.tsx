@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle, ArrowLeft, ChevronLeft, ChevronRight, Download, ExternalLink, FolderPlus, LayoutGrid, MapPin, MoreHorizontal,
-  RefreshCw, Scissors, Star, Trash2, X,
+  House, RefreshCw, Scissors, Star, Trash2, X,
 } from 'lucide-react'
 import { api, type EventDetail, type Job } from '../api'
 import {
@@ -24,6 +24,7 @@ export default function EventPage() {
   const [exportCamera, setExportCamera] = useState('grid')
   const [dialog, setDialog] = useState<'collect' | 'trim' | 'trash' | { segment: number } | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   const query = useQuery({
     queryKey: ['event', id],
@@ -36,6 +37,7 @@ export default function EventPage() {
   useEffect(() => {
     setRange(null)
     setActionError(null)
+    setNotice(null)
   }, [id])
 
   if (query.isPending) {
@@ -162,6 +164,7 @@ export default function EventPage() {
           )}
 
           {actionError && <p className="text-sm text-accent-hover">{actionError}</p>}
+          {notice && <p className="text-sm text-dim">{notice}</p>}
 
           {detail.exports.length > 0 && (
             <Card className="p-4">
@@ -245,6 +248,26 @@ export default function EventPage() {
                       <MenuItem icon={<RefreshCw className="size-4" />} onClick={() => { close(); run(() => api.process(id, 'thumbnail')) }}>
                         Refresh thumbnail
                       </MenuItem>
+                      {summary.lat != null && summary.lon != null && (
+                        <MenuItem
+                          icon={<House className="size-4" />}
+                          onClick={() => {
+                            close()
+                            run(async () => {
+                              const settings = await api.settings()
+                              const saved = await api.saveSettings({ ...settings, homeLat: summary.lat, homeLon: summary.lon })
+                              queryClient.setQueryData(['settings'], saved)
+                              setNotice(
+                                saved.homeCleanupEnabled
+                                  ? 'Home location updated.'
+                                  : 'Home location set. Turn on the clean-up of home events in Admin → Settings.',
+                              )
+                            })
+                          }}
+                        >
+                          This is home
+                        </MenuItem>
+                      )}
                       {detail.trim && (
                         <MenuItem icon={<Scissors className="size-4" />} onClick={() => { close(); setDialog('trim') }}>
                           Trim to the trigger
@@ -271,6 +294,15 @@ export default function EventPage() {
               </p>
             )}
           </Card>
+
+          {detail.homeCleanupAt && (
+            <Card className="flex gap-3 p-4">
+              <House className="mt-0.5 size-5 shrink-0 text-dim" />
+              <p className="text-sm text-dim">
+                Recorded at home. Moves to the trash on {formatDay(detail.homeCleanupAt)} unless you favorite it or add it to a collection.
+              </p>
+            </Card>
+          )}
 
           {summary.lat != null && summary.lon != null && (
             <Card className="overflow-hidden">

@@ -143,6 +143,28 @@ public sealed class ScannerTests : IDisposable
     }
 
     [Fact]
+    public async Task Home_cleanup_trashes_old_home_events_and_keeps_the_rest()
+    {
+        const string home = "{\"est_lat\":\"30.267\",\"est_lon\":\"-97.7841\"";
+        Clip("SentryClips/2026-10-01_10-00-00", "2026-10-01_09-59-00-front.mp4");
+        EventJson("SentryClips/2026-10-01_10-00-00", home + ",\"reason\":\"sentry_aware_object_detection\"}");
+        Clip("SentryClips/2026-10-01_11-00-00", "2026-10-01_10-59-00-front.mp4");
+        EventJson("SentryClips/2026-10-01_11-00-00", home + ",\"reason\":\"sentry_aware_accel_0.61\"}");
+        Clip("SentryClips/2026-10-01_12-00-00", "2026-10-01_11-59-00-front.mp4");
+        EventJson("SentryClips/2026-10-01_12-00-00", "{\"est_lat\":\"30.2673\",\"est_lon\":\"-97.7354\",\"reason\":\"sentry_aware_object_detection\"}");
+        await Scanner.ScanAsync(CancellationToken.None);
+        await _services.GetRequiredService<SettingsService>().SaveAsync(
+            new AppSettings { HomeLat = 30.267, HomeLon = -97.7841, HomeCleanupEnabled = true, HomeCleanupDays = 3 });
+
+        var moved = await _services.GetRequiredService<TrashService>().CleanupHomeAsync();
+
+        Assert.Equal(1, moved);
+        await using var db = Db();
+        var trashed = await db.Events.Where(e => e.TrashedAt != null).Select(e => e.Name).ToListAsync();
+        Assert.Equal(["2026-10-01_10-00-00"], trashed);
+    }
+
+    [Fact]
     public async Task Splits_the_measurement_off_bump_reasons_and_drops_empty_gps_fixes()
     {
         const string dir = "SentryClips/2022-01-01_10-00-30";

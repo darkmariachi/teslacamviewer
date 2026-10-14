@@ -189,6 +189,21 @@ public static class AdminApi
             return Results.Ok(new { purged = ids.Count });
         });
 
+        // What the home rule would do with the settings being edited, before they are saved.
+        group.MapPost("/home-cleanup/preview", async (AppSettings draft, TrashService trash) =>
+        {
+            var s = draft.Sanitized() with { HomeCleanupEnabled = true };
+            var covered = await trash.HomeCandidatesAsync(s, dueOnly: false);
+            var due = await trash.HomeCandidatesAsync(s, dueOnly: true);
+            return Results.Ok(new
+            {
+                covered = covered.Count,
+                coveredBytes = covered.Sum(e => e.SizeBytes),
+                due = due.Count,
+                dueBytes = due.Sum(e => e.SizeBytes),
+            });
+        });
+
         // Housekeeping: old events that are neither favorites nor in a collection.
         group.MapPost("/retention/preview", async (RetentionRequest req, AppDb db) =>
         {
