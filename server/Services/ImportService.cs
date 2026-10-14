@@ -83,7 +83,8 @@ public partial class ImportService(AppPaths paths, Scanner scanner, ILogger<Impo
         {
             if (Normalize(file.Path) is not { } relative) ignored++;
             else if (AlreadyThere(relative, file.Size)) there++;
-            else missing.Add(file with { Path = relative });
+            // Paths go back as they came, so the caller can match them to its own files.
+            else missing.Add(file);
         }
         return new ImportPlan(missing, there, ignored);
     }

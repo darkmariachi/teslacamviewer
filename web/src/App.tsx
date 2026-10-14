@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { BarChart3, FolderHeart, Map as MapIcon, Settings2, Video } from 'lucide-react'
-import { api, UNAUTHORIZED_EVENT } from './api'
+import { BarChart3, CircleHelp, FolderHeart, Map as MapIcon, Settings2, Video } from 'lucide-react'
+import { authQuery, UNAUTHORIZED_EVENT } from './api'
 import { cx } from './lib/format'
 import { Spinner } from './components/ui'
 import LoginPage from './pages/LoginPage'
@@ -13,6 +13,7 @@ import CollectionsPage from './pages/CollectionsPage'
 import CollectionPage from './pages/CollectionPage'
 import InsightsPage from './pages/InsightsPage'
 import AdminPage from './pages/AdminPage'
+import HelpPage from './pages/HelpPage'
 
 const NAV = [
   { to: '/', label: 'Events', icon: Video, end: true },
@@ -20,11 +21,13 @@ const NAV = [
   { to: '/collections', label: 'Collections', icon: FolderHeart },
   { to: '/insights', label: 'Insights', icon: BarChart3 },
   { to: '/admin', label: 'Admin', icon: Settings2 },
+  // Phones have no room for a sixth tab; Help is linked from Admin there.
+  { to: '/help', label: 'Help', icon: CircleHelp, desktopOnly: true },
 ]
 
 export default function App() {
   const queryClient = useQueryClient()
-  const status = useQuery({ queryKey: ['auth'], queryFn: api.authStatus, staleTime: Infinity })
+  const status = useQuery(authQuery)
 
   // Any API call that comes back 401 means the session ended; show the login screen again.
   useEffect(() => {
@@ -62,6 +65,7 @@ export default function App() {
         <Route path="/collections/:id" element={<CollectionPage />} />
         <Route path="/insights" element={<InsightsPage />} />
         <Route path="/admin/*" element={<AdminPage />} />
+        <Route path="/help" element={<HelpPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Shell>
@@ -121,7 +125,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       <main className={cx(flush ? '' : 'mx-auto max-w-[1500px] px-4 pt-5 sm:px-6 lg:px-8 lg:pt-8', 'pb-24 lg:pb-10')}>{children}</main>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-line bg-ink/90 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
-        {NAV.map(({ to, label, icon: Icon, end }) => (
+        {NAV.filter((n) => !n.desktopOnly).map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}

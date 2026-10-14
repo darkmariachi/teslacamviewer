@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle, CheckCircle2, Cpu, HardDrive, LogOut, Pause, Play, RefreshCw, RotateCcw, Trash2, Undo2, XCircle, Zap,
 } from 'lucide-react'
-import { api, thumbUrl, type EventType, type Job, type JobKind, type Overview, type Settings } from '../api'
+import { api, authQuery, desktopBridge, thumbUrl, type EventType, type Job, type JobKind, type Overview, type Settings } from '../api'
 import { cx, eventTitle, formatBytes, formatDateTime, formatDuration, formatRelative } from '../lib/format'
 import {
   Badge, Button, Card, ConfirmDialog, EmptyState, Field, IconButton, PageHeader, ProgressBar, Segmented, Spinner, Toggle, inputClass,
@@ -27,21 +27,33 @@ export default function AdminPage() {
   const [params, setParams] = useSearchParams()
   const tab = (params.get('tab') as Tab | null) ?? 'processing'
   const overview = useQuery({ queryKey: ['overview'], queryFn: api.overview, refetchInterval: 2000 })
+  const settings = useQuery({ queryKey: ['settings'], queryFn: api.settings })
+  const auth = useQuery(authQuery)
+  const desktop = auth.data?.desktop ?? false
+  // The Car tab is only for people whose clips arrive through teslausb; the password only exists outside the desktop app.
+  const showCar = settings.data?.teslausbEnabled ?? false
 
   return (
     <>
-      <PageHeader title="Admin" />
+      <PageHeader
+        title="Admin"
+        actions={
+          <Link to="/help" className="text-[13px] text-dim hover:text-fg">
+            Help and guides
+          </Link>
+        }
+      />
       <div className="-mx-4 mb-5 overflow-x-auto px-4 sm:mx-0 sm:px-0">
         <Segmented
           value={tab}
           onChange={(value) => setParams(value === 'processing' ? {} : { tab: value }, { replace: true })}
           options={[
             { value: 'processing', label: 'Processing' },
-            { value: 'car', label: 'Car' },
+            ...(showCar || tab === 'car' ? [{ value: 'car' as Tab, label: 'Car' }] : []),
             { value: 'library', label: 'Library' },
             { value: 'settings', label: 'Settings' },
             { value: 'trash', label: overview.data?.trash.count ? `Trash (${overview.data.trash.count})` : 'Trash' },
-            { value: 'account', label: 'Account' },
+            ...(desktop ? [] : [{ value: 'account' as Tab, label: 'Account' }]),
           ]}
         />
       </div>
@@ -54,7 +66,7 @@ export default function AdminPage() {
       ) : tab === 'car' ? (
         <CarTab />
       ) : tab === 'library' ? (
-        <Library overview={overview.data} />
+        <Library overview={overview.data} libraryFolder={desktop ? auth.data?.libraryFolder ?? null : null} />
       ) : tab === 'settings' ? (
         <SettingsForm />
       ) : tab === 'trash' ? (
@@ -112,8 +124,12 @@ function Processing({ overview }: { overview: Overview }) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1.5 text-[13px] text-dim" title={pipeline.ffmpegVersion ? `ffmpeg ${pipeline.ffmpegVersion}` : 'ffmpeg was not found'}>
-            {pipeline.encoder === 'vaapi' ? <Zap className="size-4 text-ok" /> : <Cpu className="size-4" />}
-            {pipeline.ffmpegVersion ? (pipeline.encoder === 'vaapi' ? 'Hardware encoding' : 'Software encoding') : 'ffmpeg missing'}
+            {pipeline.encoder !== 'software' ? <Zap className="size-4 text-ok" /> : <Cpu className="size-4" />}
+            {pipeline.ffmpegVersion
+              ? pipeline.encoder !== 'software'
+                ? `Hardware encoding (${ENCODER_LABEL[pipeline.encoder as Settings['encoder']] ?? pipeline.encoder})`
+                : 'Software encoding'
+              : 'ffmpeg missing'}
           </span>
           <Button
             icon={pipeline.paused ? <Play className="size-4" /> : <Pause className="size-4" />}
@@ -346,7 +362,17 @@ function JobRow({ job, onChange }: { job: Job; onChange: () => void }) {
   )
 }
 
-function Library({ overview }: { overview: Overview }) {
+const ENCODER_LABEL: Record<Settings['encoder'], string> = {
+  auto: 'Automatic',
+  software: 'Software (processor)',
+  vaapi: 'Intel or AMD on Linux (VAAPI)',
+  qsv: 'Intel Quick Sync',
+  nvenc: 'NVIDIA',
+  amf: 'AMD',
+  videotoolbox: 'Apple',
+}
+
+function Library({ overview, libraryFolder }: { overview: Overview; libraryFolder: string | null }) {
   const refresh = useRefresh()
   const { scan, library, storage } = overview
   const used = storage.clips ? storage.clips.totalBytes - storage.clips.freeBytes : 0
@@ -381,6 +407,7 @@ function Library({ overview }: { overview: Overview }) {
             Last scan: {scan.lastResult.added} added, {scan.lastResult.updated} updated, {scan.lastResult.removed} removed.
           </p>
         )}
+        {libraryFolder && <LibraryFolder path={libraryFolder} />}
         {!storage.clipsWritable && (
           <p className="mt-4 flex items-start gap-2 text-[13px] text-warn">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" /> The clip folder is read-only, so deleting events is not possible.
@@ -404,6 +431,28 @@ function Library({ overview }: { overview: Overview }) {
           </p>
         )}
       </Card>
+    </div>
+  )
+}
+
+/** Desktop app only: where the library lives, and moving it. */
+function LibraryFolder({ path }: { path: string }) {
+  const bridge = desktopBridge()
+  return (
+    <div className="mt-5 border-t border-line pt-5">
+      <p className="label">Library folder</p>
+      <p className="mt-1 text-sm break-all">{path}</p>
+      <p className="mt-1 text-xs text-faint">Imported clips are copied here. Thumbnails and merged videos are kept in the app's own data folder.</p>
+      {bridge && (
+        <div className="mt-3 flex gap-2">
+          <Button size="sm" onClick={() => bridge.showFolder(path)}>
+            Open folder
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => bridge.changeLibraryFolder()}>
+            Use another folder…
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
@@ -490,11 +539,16 @@ function SettingsForm() {
       </Section>
 
       <Section title="Performance" description="Keep encoding from getting in the way of everything else on the server.">
-        <Field label="Encoder" hint="Automatic uses the graphics chip when the server exposes one, which is much faster.">
+        <Field
+          label="Encoder"
+          hint="Automatic uses the graphics chip when one works, which is much faster. A choice that doesn't work on this computer falls back to software."
+        >
           <select value={draft.encoder} onChange={(e) => set({ encoder: e.target.value as Settings['encoder'] })} className={inputClass}>
-            <option value="auto">Automatic</option>
-            <option value="vaapi">Hardware (VAAPI)</option>
-            <option value="software">Software</option>
+            {(Object.keys(ENCODER_LABEL) as Settings['encoder'][]).map((value) => (
+              <option key={value} value={value}>
+                {ENCODER_LABEL[value]}
+              </option>
+            ))}
           </select>
         </Field>
         <Field label="Processor threads for encoding" hint="0 lets ffmpeg decide. Lower it if other services slow down.">
@@ -538,7 +592,7 @@ function SettingsForm() {
 
       <Section
         title="Sentry at home"
-        description="Leaving Sentry on at home keeps the car's USB port powered so uploads finish, but it records everyone who walks past. Those events can clean themselves up."
+        description="With Sentry on at home (for example so teslausb can finish uploading), the car records everyone who walks past. Those events can clean themselves up."
       >
         <Row
           label="Clean up Sentry events recorded at home"
@@ -567,6 +621,15 @@ function SettingsForm() {
           <NumberInput value={draft.homeCleanupDays} min={1} max={365} suffix="days" onChange={(v) => set({ homeCleanupDays: v })} />
         </Field>
         {draft.homeLat != null && <HomeCleanupPreview draft={draft} />}
+      </Section>
+
+      <Section
+        title="teslausb"
+        description="teslausb is a small computer in the car that copies new clips to your network when the car gets home. Turn this on if you use one; otherwise import clips from the Events page."
+      >
+        <Row label="My clips arrive through teslausb" hint="Shows the Car tab, where you enter the device's address and see when the car is home and uploading.">
+          <Toggle label="Use teslausb" checked={draft.teslausbEnabled} onChange={(v) => set({ teslausbEnabled: v })} />
+        </Row>
       </Section>
 
       <Section title="Notifications" description="Get a call when the car records a new Sentry event, for example into a Home Assistant webhook.">

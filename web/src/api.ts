@@ -143,12 +143,14 @@ export interface Settings {
   homeCleanupEnabled: boolean
   homeCleanupDays: number
   ffmpegThreads: number
-  encoder: 'auto' | 'software' | 'vaapi'
+  encoder: 'auto' | 'software' | 'vaapi' | 'qsv' | 'nvenc' | 'amf' | 'videotoolbox'
   previewCellHeight: number
   previewFps: number
   previewQuality: number
   webhookUrl: string | null
   archiverUrl: string | null
+  /** Clips arrive through teslausb: shows the Car tab and polls the device. */
+  teslausbEnabled: boolean
 }
 
 export interface ArchiverStatus {
@@ -179,6 +181,7 @@ export interface ArchiverSync {
 
 /** The teslausb device in the car, as seen from the home network. */
 export interface Archiver {
+  enabled: boolean
   configured: boolean
   url: string | null
   hookPath: string
@@ -232,6 +235,64 @@ export interface Overview {
   }
   trash: { count: number; bytes: number; retentionDays: number }
 }
+
+export interface AuthStatus {
+  setupRequired: boolean
+  authenticated: boolean
+  /** Running inside the desktop app: no password, and the library folder is on this computer. */
+  desktop: boolean
+  libraryFolder: string | null
+}
+
+export interface ImportCheck {
+  missing: { path: string; size: number }[]
+  missingBytes: number
+  alreadyThere: number
+  ignored: number
+}
+
+export interface ImportStatus {
+  running: boolean
+  source: string | null
+  totalFiles: number
+  totalBytes: number
+  doneFiles: number
+  doneBytes: number
+  alreadyThere: number
+  failed: number
+  deleted: number
+  deleteAfter: boolean
+  canceled: boolean
+  error: string | null
+  startedUtc: string | null
+  finishedUtc: string | null
+}
+
+export interface ImportDrive {
+  path: string
+  name: string
+  totalBytes: number
+}
+
+/** What the desktop app adds to the page through its preload script. Absent in a normal browser. */
+export interface DesktopBridge {
+  version: string
+  pickFolder: (title: string) => Promise<string | null>
+  changeLibraryFolder: () => Promise<boolean>
+  showFolder: (path: string) => Promise<void>
+  checkForUpdates: () => Promise<string>
+}
+
+declare global {
+  interface Window {
+    teslacamDesktop?: DesktopBridge
+  }
+}
+
+export const desktopBridge = () => window.teslacamDesktop
+
+/** Shared by every component that needs to know whether this is the desktop app. */
+export const authQuery = { queryKey: ['auth'], queryFn: () => api.authStatus(), staleTime: Infinity } as const
 
 export interface Stats {
   total: number
@@ -306,7 +367,7 @@ function query(params: object): string {
 }
 
 export const api = {
-  authStatus: () => request<{ setupRequired: boolean; authenticated: boolean }>('GET', '/api/auth/status'),
+  authStatus: () => request<AuthStatus>('GET', '/api/auth/status'),
   setup: (password: string) => request<void>('POST', '/api/auth/setup', { password }),
   login: (password: string) => request<void>('POST', '/api/auth/login', { password }),
   logout: () => request<void>('POST', '/api/auth/logout'),
@@ -365,6 +426,15 @@ export const api = {
     request<{ moved: number }>('POST', '/api/admin/retention/apply', { olderThanDays, types }),
   stats: () => request<Stats>('GET', '/api/stats'),
 
+  importCheck: (files: { path: string; size: number }[]) => request<ImportCheck>('POST', '/api/import/check', { files }),
+  importFinish: () => request<void>('POST', '/api/import/finish'),
+  importStatus: () => request<ImportStatus>('GET', '/api/import/status'),
+  importCancel: () => request<void>('POST', '/api/import/cancel'),
+  importDrives: () => request<ImportDrive[]>('GET', '/api/import/drives'),
+  importPlan: (folder: string) =>
+    request<{ files: number; bytes: number; alreadyThere: number }>('POST', '/api/import/plan', { folder, deleteAfter: false }),
+  importFolder: (folder: string, deleteAfter: boolean) => request<void>('POST', '/api/import/folder', { folder, deleteAfter }),
+
   archiver: () => request<Archiver>('GET', '/api/archiver'),
   archiverSync: () => request<void>('POST', '/api/archiver/sync'),
   archiverPoll: () => request<void>('POST', '/api/archiver/poll'),
@@ -372,3 +442,25 @@ export const api = {
 
 export const thumbUrl = (eventId: number) => `/api/media/thumb/${eventId}`
 export const eventClipUrl = (eventId: number) => `/api/media/eventclip/${eventId}`
+
+/**
+ * Sends one file to the library. XMLHttpRequest rather than fetch, because only it reports upload
+ * progress. Resolves when the server has stored the file.
+ */
+export function uploadClip(file: File, path: string, onProgress: (sentBytes: number) => void, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    const params = new URLSearchParams({ path, size: String(file.size), modified: String(file.lastModified) })
+    xhr.open('PUT', `/api/import/file?${params}`)
+    xhr.upload.onprogress = (e) => onProgress(e.loaded)
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) return resolve()
+      const message = (safeParse(xhr.responseText) as { error?: string } | undefined)?.error ?? `Upload failed (${xhr.status})`
+      reject(new ApiError(xhr.status, message))
+    }
+    xhr.onerror = () => reject(new ApiError(0, 'The connection to the server was lost'))
+    xhr.onabort = () => reject(new DOMException('Canceled', 'AbortError'))
+    signal.addEventListener('abort', () => xhr.abort())
+    xhr.send(file)
+  })
+}
