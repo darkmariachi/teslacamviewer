@@ -431,7 +431,7 @@ export function Player({ detail, previewJob, onGeneratePreview, range, onRangeCh
               </ControlButton>
             )}
             <ControlButton
-              label={range ? 'Cancel clip selection' : 'Select a clip to export'}
+              label={range ? 'Cancel clip selection' : 'Select a clip to export or keep'}
               active={!!range}
               onClick={() => onRangeChange(range ? null : [Math.max(0, position - 5), Math.min(total, position + 10)])}
             >

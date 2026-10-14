@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using TeslaCam.Data;
 using TeslaCam.Services;
@@ -10,6 +11,7 @@ public static class EventsApi
     public record PatchEvent(bool? Favorite, string? Notes);
     public record ProcessRequest(string Kind);
     public record ExportRequest(string Camera, double Start, double End);
+    public record KeepRequest(double Start, double End);
     public record BulkRequest(int[] Ids, string Action, int? CollectionId);
 
     public static void MapEventsApi(this IEndpointRouteBuilder app)
@@ -157,6 +159,14 @@ public static class EventsApi
             Guard(() => trash.TrashSegmentAsync(id, segmentId)));
 
         group.MapPost("/{id:int}/trim", (int id, TrashService trash) => Guard(() => trash.TrimAsync(id)));
+
+        // Cut the event's own clips down to a range on its timeline; the rest goes to the trash folder.
+        group.MapPost("/{id:int}/keep", async (int id, KeepRequest req, RangeKeeper keeper) =>
+        {
+            long bytes = 0;
+            var result = await Guard(async () => bytes = await keeper.KeepAsync(id, req.Start, req.End));
+            return result is Ok ? Results.Ok(new { bytes }) : result;
+        });
 
         // Ask for a merged preview, a compatibility transcode, or fresh metadata right now.
         group.MapPost("/{id:int}/process", async (int id, ProcessRequest req, JobQueue queue, AppDb db) =>

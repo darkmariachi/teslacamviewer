@@ -177,6 +177,20 @@ public class Ffmpeg(SettingsService settings, IConfiguration config, ILogger<Ffm
         }
     }
 
+    /// <summary>Times of the video keyframes in a file, in seconds; empty when it can't be read.</summary>
+    public async Task<List<double>> KeyframesAsync(string file, CancellationToken ct)
+    {
+        var (code, stdout, _) = await Exec(Tool("ffprobe"),
+        [
+            "-v", "error", "-select_streams", "v:0", "-skip_frame", "nokey",
+            "-show_entries", "frame=pts_time", "-of", "csv=p=0", file,
+        ], ct);
+        if (code != 0) return [];
+        return stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(l => double.TryParse(l.TrimEnd(','), NumberStyles.Float, CultureInfo.InvariantCulture, out var t) ? t : double.NaN)
+            .Where(t => !double.IsNaN(t)).Order().ToList();
+    }
+
     /// <summary>
     /// Runs ffmpeg at low CPU priority. <paramref name="onProgress"/> receives seconds of output written.
     /// </summary>

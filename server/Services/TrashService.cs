@@ -10,7 +10,8 @@ namespace TeslaCam.Services;
 public class TrashService(IDbContextFactory<AppDb> dbf, AppPaths paths, SettingsService settings, Scanner scanner, ILogger<TrashService> log)
     : BackgroundService
 {
-    private const string SegmentsDir = "_segments";
+    /// <summary>Folder in the trash for clips removed from events that stay, kept until the retention period ends.</summary>
+    public const string SegmentsDir = "_segments";
 
     public async Task TrashAsync(int eventId)
     {

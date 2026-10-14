@@ -126,7 +126,7 @@ export default function HelpPage() {
               <li>Every camera plays in sync on one timeline. Click a camera to make it the large view, or switch to Merged.</li>
               <li>The red mark on the timeline is the moment the car was triggered, and playback starts just before it.</li>
               <li>Hovering an event card plays the car's own few seconds around the trigger, when the car saved them.</li>
-              <li>The scissors select a range to export, from one camera or as a grid.</li>
+              <li>The scissors select a range to export, from one camera or as a grid, or to keep while the rest goes to the trash.</li>
             </ul>
             <table className="mt-3 w-full text-left text-[13px]">
               <tbody className="divide-y divide-line">
@@ -152,6 +152,11 @@ export default function HelpPage() {
               <li>
                 <strong>Trim.</strong> Newer cars save ten minutes of lead-up with each Sentry event. Trim (in an event's menu, or
                 for many events in selection mode) keeps only the minutes around the trigger. Admin → Settings sets how much.
+              </li>
+              <li>
+                <strong>Keep only part.</strong> Pick a range with the scissors on the timeline and choose <strong>Keep only this</strong>.
+                Every camera's footage outside the range moves to the trash folder and the event is rebuilt from what's left.
+                Cuts land on the nearest keyframe, so a second or two more may stay.
               </li>
               <li>
                 <strong>Delete.</strong> Deleted events go to a trash folder inside the clip folder and can be restored from Admin

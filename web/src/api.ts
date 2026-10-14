@@ -423,6 +423,9 @@ export const api = {
   restoreEvent: (id: number) => request<void>('POST', `/api/events/${id}/restore`),
   trashSegment: (id: number, segmentId: number) => request<void>('DELETE', `/api/events/${id}/segments/${segmentId}`),
   trimEvent: (id: number) => request<void>('POST', `/api/events/${id}/trim`),
+  /** Cuts the event's own clips down to start–end; returns roughly how many bytes left the event. */
+  keepRange: (id: number, start: number, end: number) =>
+    request<{ bytes: number }>('POST', `/api/events/${id}/keep`, { start, end }),
   process: (id: number, kind: JobKind) => request<Job>('POST', `/api/events/${id}/process`, { kind }),
   exportClip: (id: number, camera: string, start: number, end: number) =>
     request<Job>('POST', `/api/events/${id}/export`, { camera, start, end }),
