@@ -3,7 +3,7 @@ name: Checks
 # Tests and builds for every push to the main branches and every pull request.
 on:
   push:
-    branches: [develop, main]
+    branches: [main]
   pull_request:
 
 permissions:

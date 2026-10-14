@@ -435,7 +435,8 @@ library.
 Four GitHub Actions workflows live in `.github/workflows`:
 
 - **Checks** runs the server tests, the web app's lint and build, and the desktop app's type check for every push
-  to `develop` or `main` and every pull request.
+  to `main` and every pull request. Changes go to `main` through pull requests, which need these checks to pass;
+  releases come from version tags, so `main` can move ahead of the latest release.
 - **Build desktop app** builds the Windows and Linux installers. It runs by hand from the Actions tab, for pull
   requests that touch `desktop/`, and for tags such as `v2.0.0`, which also create a draft release with the
   files attached.
