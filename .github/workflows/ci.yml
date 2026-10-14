@@ -1,0 +1,54 @@
+name: Checks
+
+# Tests and builds for every push to the main branches and every pull request.
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  server:
+    name: Server tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet test
+
+  web:
+    name: Web app
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  desktop:
+    name: Desktop app
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck

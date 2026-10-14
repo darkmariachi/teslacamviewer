@@ -1,0 +1,24 @@
+services:
+  teslacamviewer:
+    image: ghcr.io/darkmariachi/teslacamviewer:latest
+    # Or build from a clone of this repository:
+    # build: .
+    container_name: teslacamviewer
+    restart: unless-stopped
+    # Run as the user that owns the clips so deleting and restoring works.
+    user: "1000:1000"
+    environment:
+      - TZ=America/Chicago
+    volumes:
+      # The folder that contains SentryClips/ and SavedClips/ (teslausb's archive share).
+      - /path/to/teslacam:/teslacam
+      # Database, login keys, thumbnails, merged videos and exports.
+      - ./data:/data
+    ports:
+      - 7544:8080
+    # Optional: hardware encoding on Intel graphics. Remove both blocks if the host has no /dev/dri.
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:
+      # The numeric id of the host's "render" group: getent group render
+      - "993"
