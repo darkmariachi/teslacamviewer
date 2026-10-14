@@ -3,7 +3,7 @@ name: Website
 # Publishes site/ to GitHub Pages: https://darkmariachi.github.io/teslacamviewer/
 on:
   push:
-    branches: [develop]
+    branches: [main]
     paths:
       - site/**
       - docs/screenshots/**
