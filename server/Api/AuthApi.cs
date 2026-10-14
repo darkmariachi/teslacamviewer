@@ -21,6 +21,8 @@ public static class AuthApi
             authenticated = ctx.User.Identity?.IsAuthenticated == true,
             desktop = desktop.Enabled,
             libraryFolder = desktop.Enabled && ctx.User.Identity?.IsAuthenticated == true ? paths.Root : null,
+            // False when the clip folder is missing: an unplugged drive, an unmounted share, a deleted folder.
+            libraryAvailable = Directory.Exists(paths.Root),
         }));
 
         // First run only: choose the password.

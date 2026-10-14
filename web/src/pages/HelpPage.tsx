@@ -6,6 +6,7 @@ import { Card, PageHeader } from '../components/ui'
 
 const SECTIONS = [
   { id: 'getting-clips-in', title: 'Getting clips in' },
+  { id: 'library-folder', title: 'Your library folder' },
   { id: 'encryption', title: "The car's dashcam settings" },
   { id: 'watching', title: 'Watching an event' },
   { id: 'saving-space', title: 'Saving space' },
@@ -30,7 +31,7 @@ export default function HelpPage() {
       <PageHeader title="Help" subtitle="How to get clips in, find what matters, and keep the library tidy." />
       <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
         <nav className="hidden lg:block">
-          <ul className="sticky top-8 space-y-1 text-sm">
+          <ul className="sticky top-[calc(2rem+var(--tb))] space-y-1 text-sm">
             {SECTIONS.map((s) => (
               <li key={s.id}>
                 <a href={`#${s.id}`} className="block rounded-md px-2 py-1.5 text-dim hover:bg-raised hover:text-fg">
@@ -65,12 +66,48 @@ export default function HelpPage() {
                 {desktop
                   ? 'Copy the SentryClips, SavedClips or RecentClips folders into the library folder shown in Admin → Library.'
                   : 'Copy the SentryClips, SavedClips or RecentClips folders into the clip folder the server was set up with.'}{' '}
-                The folder is checked every few minutes; Admin → Library → Scan now checks straight away.
+                The folder is checked every few minutes; Admin → Library → Scan now checks straight away. Dragging the drive's
+                whole TeslaCam folder in works too.
               </li>
             </ol>
             <p>
               Sentry events and saved clips each become one event. Recent clips (the car's rolling dashcam footage) are grouped
               into drives wherever recording stopped for a while.
+            </p>
+          </Section>
+
+          <Section id="library-folder" title="Your library folder">
+            {desktop ? (
+              <>
+                <p>
+                  The library is one folder of clips. When the app first opens it asks whether to start a new one or to use a
+                  folder where you already keep your clips; nothing is copied or moved in that case. Admin → Library shows the
+                  folder and can switch to another. Each folder keeps its own notes, favorites and collections, so switching
+                  back loses nothing.
+                </p>
+                <p>
+                  When the car's USB drive is plugged in, or was already plugged in when the app opened, the app offers to import
+                  whatever on it is new. Importing never adds a clip twice: anything already in the library is skipped, wherever
+                  it came from.
+                </p>
+              </>
+            ) : (
+              <p>
+                The library is the clip folder the server was set up with. Everything in it is shown, including a TeslaCam folder
+                dropped inside it.
+              </p>
+            )}
+            <p>
+              <strong>If you copied or moved clips while the app was closed,</strong> they are picked up when it opens: the folder
+              is read again at start. If the drive is still plugged in, only what didn't make it across is offered for import, and
+              "Clear the clips from the drive afterwards" then removes what is safely in the library. A copy that was interrupted
+              is finished by importing again, since a file with the wrong size is copied again.
+            </p>
+            <p>
+              <strong>If the folder goes missing,</strong> for example because it is on a drive that is unplugged, the app says so
+              and keeps everything it knows. The library comes back by itself when the folder does. A folder on the car's own
+              drive is a poor home for the library for the same reason: choose one on {desktop ? 'this computer' : 'the server'} and
+              import from the drive instead.
             </p>
           </Section>
 
@@ -204,6 +241,10 @@ export default function HelpPage() {
               <Item q="Processing is slow.">
                 Merged videos are the slow part. Admin → Processing shows whether a graphics chip is used; Admin → Settings can lower
                 the resolution, pick which events are merged and limit heavy work to the night.
+              </Item>
+              <Item q="The library is empty after choosing a folder.">
+                The app looks for SentryClips, SavedClips or RecentClips in the folder, or in a TeslaCam folder inside it. Clips
+                in an EncryptedClips folder can't be shown; see the car's dashcam settings above.
               </Item>
               <Item q="Import can't find the drive.">
                 {desktop

@@ -1,18 +1,17 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Upload, VideoOff } from 'lucide-react'
+import { FolderX, Upload, VideoOff } from 'lucide-react'
 import { authQuery } from '../api'
 import { EventBrowser } from '../components/EventBrowser'
-import { ImportDialog } from '../components/ImportDialog'
+import { useImport } from '../components/Library'
 import { Button, EmptyState, PageHeader } from '../components/ui'
 import { cx, formatRelative } from '../lib/format'
 import { archiverQuery } from './CarTab'
 
 export default function EventsPage() {
-  const auth = useQuery(authQuery)
-  const [importing, setImporting] = useState(false)
-  const openImport = () => setImporting(true)
+  const { open } = useImport()
+  const openImport = () => open()
+  const libraryMissing = useQuery(authQuery).data?.libraryAvailable === false
 
   return (
     <>
@@ -29,6 +28,11 @@ export default function EventsPage() {
       />
       <EventBrowser
         empty={
+          libraryMissing ? (
+            <EmptyState icon={<FolderX className="size-6" />} title="Waiting for the library folder">
+              Your events show up again as soon as the folder is back.
+            </EmptyState>
+          ) : (
           <EmptyState icon={<VideoOff className="size-6" />} title="No clips yet">
             <p>Import the clips from your car's USB drive to get started.</p>
             <div className="mt-4">
@@ -43,9 +47,9 @@ export default function EventsPage() {
               </Link>
             </p>
           </EmptyState>
+          )
         }
       />
-      {importing && <ImportDialog desktop={auth.data?.desktop ?? false} onClose={() => setImporting(false)} />}
     </>
   )
 }

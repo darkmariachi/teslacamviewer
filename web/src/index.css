@@ -46,6 +46,14 @@ body {
   min-height: 100dvh;
 }
 
+/* Height of the desktop app's own title bar; nothing in a browser. Fixed and sticky things sit below it. */
+:root {
+  --tb: 0px;
+}
+:root.desktop-app {
+  --tb: 38px;
+}
+
 button,
 [role='button'] {
   cursor: pointer;

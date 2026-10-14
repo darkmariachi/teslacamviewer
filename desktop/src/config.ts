@@ -4,8 +4,12 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 export interface Config {
-  /** Where imported clips are kept. */
+  /** Where imported clips are kept, or the folder of clips the user already had. */
   libraryFolder?: string
+  /** Each library's own data folder (index, notes, thumbnails), by library path, so switching libraries loses nothing. */
+  libraryData?: Record<string, string>
+  /** Set once the first-run choice (new library or existing folder) has been made. */
+  welcomed?: boolean
   checkForUpdates: boolean
   windowBounds?: { x: number; y: number; width: number; height: number; maximized: boolean }
 }

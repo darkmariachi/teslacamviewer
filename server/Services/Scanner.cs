@@ -88,24 +88,34 @@ public partial class Scanner(IDbContextFactory<AppDb> dbf, AppPaths paths, JobQu
             if (!Directory.Exists(baseDir)) throw new DirectoryNotFoundException($"Clip folder {baseDir} does not exist");
 
             var found = new Dictionary<(EventType, string, string), PhysicalEvent>();
-            var anyTypeDir = false;
-            foreach (var (type, dirName) in new[] { (EventType.Sentry, "SentryClips"), (EventType.Saved, "SavedClips") })
+            // An event copied into both the library and a TeslaCam folder inside it is listed once, from the library.
+            var seen = new HashSet<(EventType, string)>();
+            void Add(PhysicalEvent pe)
             {
-                var dir = Path.Combine(baseDir, dirName);
-                if (!Directory.Exists(dir)) continue;
-                anyTypeDir = true;
-                foreach (var sub in Directory.EnumerateDirectories(dir))
-                {
-                    ct.ThrowIfCancellationRequested();
-                    var pe = ReadFolder(type, sub, Path.GetFileName(sub), $"{dirName}/{Path.GetFileName(sub)}");
-                    if (pe != null) found[(pe.Type, pe.Name, pe.RelPath)] = pe;
-                }
+                if (seen.Add((pe.Type, pe.Name))) found[(pe.Type, pe.Name, pe.RelPath)] = pe;
             }
-            var recentDir = Path.Combine(baseDir, "RecentClips");
-            if (Directory.Exists(recentDir))
+            var anyTypeDir = false;
+            foreach (var clipDir in paths.ClipBases())
             {
-                anyTypeDir = true;
-                foreach (var pe in ReadRecent(recentDir, baseDir, ct)) found[(pe.Type, pe.Name, pe.RelPath)] = pe;
+                var relative = Path.GetRelativePath(baseDir, clipDir);
+                var prefix = relative == "." ? "" : relative.Replace('\\', '/') + "/";
+                foreach (var (type, dirName) in new[] { (EventType.Sentry, "SentryClips"), (EventType.Saved, "SavedClips") })
+                {
+                    var dir = Path.Combine(clipDir, dirName);
+                    if (!Directory.Exists(dir)) continue;
+                    anyTypeDir = true;
+                    foreach (var sub in Directory.EnumerateDirectories(dir))
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        if (ReadFolder(type, sub, Path.GetFileName(sub), $"{prefix}{dirName}/{Path.GetFileName(sub)}") is { } pe) Add(pe);
+                    }
+                }
+                var recentDir = Path.Combine(clipDir, "RecentClips");
+                if (Directory.Exists(recentDir))
+                {
+                    anyTypeDir = true;
+                    foreach (var pe in ReadRecent(recentDir, baseDir, ct)) Add(pe);
+                }
             }
 
             await using var db = await dbf.CreateDbContextAsync(ct);

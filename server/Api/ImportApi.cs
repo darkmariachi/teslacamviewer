@@ -7,6 +7,7 @@ public static class ImportApi
 {
     public record CheckRequest(ImportFile[] Files);
     public record FolderRequest(string Folder, bool DeleteAfter);
+    public record InspectRequest(string Folder);
 
     public static void MapImportApi(this IEndpointRouteBuilder app)
     {
@@ -47,13 +48,17 @@ public static class ImportApi
         group.MapGet("/drives", (ImportService import, DesktopMode desktop) =>
             desktop.Enabled ? Results.Ok(import.Drives()) : Results.NotFound());
 
+        // What is in a folder someone wants to use as their library.
+        group.MapPost("/inspect", (InspectRequest req, ImportService import, DesktopMode desktop) =>
+            desktop.Enabled ? Results.Ok(import.Inspect(req.Folder)) : Results.NotFound());
+
         group.MapPost("/plan", (FolderRequest req, ImportService import, DesktopMode desktop) =>
         {
             if (!desktop.Enabled) return Task.FromResult(Results.NotFound());
             return Guard(() =>
             {
                 var plan = import.PlanFolder(req.Folder);
-                return Task.FromResult<object>(new { files = plan.Missing.Count, bytes = plan.MissingBytes, plan.AlreadyThere });
+                return Task.FromResult<object>(new { files = plan.Missing.Count, bytes = plan.MissingBytes, plan.AlreadyThere, plan.Encrypted });
             });
         });
 

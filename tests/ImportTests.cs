@@ -137,6 +137,76 @@ public sealed class ImportTests : IDisposable
     }
 
     [Fact]
+    public void The_library_itself_is_never_an_import_source()
+    {
+        // Importing the library into itself would copy nothing, and "clear the drive" would empty the library.
+        Directory.CreateDirectory(Path.Combine(Library, "SentryClips", "2026-10-13_15-36-30"));
+
+        Assert.Throws<InvalidOperationException>(() => Import.PlanFolder(Library));
+        Assert.Throws<InvalidOperationException>(() => Import.StartFolderImport(Library, deleteAfter: true));
+        Assert.Throws<InvalidOperationException>(() => Import.PlanFolder(Path.Combine(Library, "SentryClips")));
+        Assert.True(ImportService.Overlaps(Library, Path.Combine(Library, "TeslaCam")));
+        Assert.False(ImportService.Overlaps(Library, Drive));
+    }
+
+    [Fact]
+    public void Clips_moved_into_the_library_by_hand_are_not_imported_again()
+    {
+        // The drive was dragged into the library while the app was closed, TeslaCam folder and all.
+        const string clip = "TeslaCam/SentryClips/2026-10-13_15-36-30/2026-10-13_15-35-32-front.mp4";
+        DriveFile(clip, 100);
+        var moved = Path.Combine(Library, clip.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(moved)!);
+        File.WriteAllBytes(moved, new byte[100]);
+
+        var plan = Import.PlanFolder(Drive);
+
+        Assert.Empty(plan.Missing);
+        Assert.Equal(1, plan.AlreadyThere);
+    }
+
+    [Fact]
+    public void Encrypted_clips_are_counted_but_not_imported()
+    {
+        DriveFile("TeslaCam/EncryptedClips/RecentClips/2026-10-12_21-00-03-front.mp4", 100);
+        DriveFile("TeslaCam/RecentClips/2026-10-12_21-00-38-front.mp4", 100);
+
+        var plan = Import.PlanFolder(Drive);
+
+        Assert.Equal(1, plan.Encrypted);
+        Assert.Equal(["RecentClips/2026-10-12_21-00-38-front.mp4"], plan.Missing.Select(f => f.Path));
+    }
+
+    [Fact]
+    public void Importing_into_a_library_that_went_missing_is_refused()
+    {
+        DriveFile("TeslaCam/SentryClips/2026-10-13_15-36-30/2026-10-13_15-35-32-front.mp4", 100);
+        Directory.Delete(Library, true);
+
+        var error = Assert.Throws<InvalidOperationException>(() => Import.StartFolderImport(Drive, deleteAfter: true));
+        Assert.Contains("isn't available", error.Message);
+        Assert.False(Directory.Exists(Library));
+    }
+
+    [Fact]
+    public void Inspecting_a_folder_reports_its_clips()
+    {
+        DriveFile("TeslaCam/SentryClips/2026-10-13_15-36-30/2026-10-13_15-35-32-front.mp4");
+        DriveFile("TeslaCam/SavedClips/2026-10-12_08-00-00/2026-10-12_07-59-00-front.mp4");
+        DriveFile("TeslaCam/EncryptedClips/RecentClips/2026-10-12_21-00-03-front.mp4");
+
+        var info = Import.Inspect(Drive);
+
+        Assert.True(info.Exists);
+        Assert.Equal(Path.Combine(Drive, "TeslaCam"), info.ClipRoot);
+        Assert.Equal(2, info.Events);
+        Assert.Equal(1, info.Encrypted);
+        Assert.False(info.IsLibrary);
+        Assert.True(Import.Inspect(Library).IsLibrary);
+        Assert.False(Import.Inspect(Path.Combine(_root, "nowhere")).Exists);
+    }
+
+    [Fact]
     public void A_folder_without_clips_is_refused()
     {
         Directory.CreateDirectory(Path.Combine(Drive, "Music"));

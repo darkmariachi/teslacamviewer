@@ -5,6 +5,8 @@ import { BarChart3, CircleHelp, FolderHeart, Map as MapIcon, Settings2, Video } 
 import { authQuery, UNAUTHORIZED_EVENT } from './api'
 import { cx } from './lib/format'
 import { Spinner } from './components/ui'
+import { TitleBar } from './components/TitleBar'
+import { DriveNotice, ImportProvider, LibraryMissing, Welcome } from './components/Library'
 import LoginPage from './pages/LoginPage'
 import EventsPage from './pages/EventsPage'
 import EventPage from './pages/EventPage'
@@ -27,7 +29,12 @@ const NAV = [
 
 export default function App() {
   const queryClient = useQueryClient()
-  const status = useQuery(authQuery)
+  const status = useQuery({
+    ...authQuery,
+    // Notice a library folder that goes missing (an unplugged drive), and while it is missing, look for it every
+    // few seconds so the library comes back by itself.
+    refetchInterval: (q) => (q.state.data?.libraryAvailable === false ? 4000 : 30_000),
+  })
 
   // Any API call that comes back 401 means the session ended; show the login screen again.
   useEffect(() => {
@@ -39,6 +46,7 @@ export default function App() {
   if (status.isPending) {
     return (
       <div className="flex min-h-dvh items-center justify-center">
+        <TitleBar />
         <Spinner className="size-7" />
       </div>
     )
@@ -46,6 +54,7 @@ export default function App() {
   if (status.isError) {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-2 px-6 text-center">
+        <TitleBar />
         <p className="text-lg font-semibold">Can't reach the server</p>
         <p className="text-sm text-dim">Check that TeslaCam is running, then reload.</p>
       </div>
@@ -55,8 +64,10 @@ export default function App() {
     return <LoginPage setup={status.data.setupRequired} />
   }
 
+  const { desktop, libraryAvailable, libraryFolder } = status.data
   return (
-    <Shell>
+    <ImportProvider desktop={desktop}>
+      <Shell banner={libraryAvailable === false ? <LibraryMissing folder={libraryFolder} desktop={desktop} /> : null}>
       <Routes>
         <Route path="/" element={<EventsPage />} />
         <Route path="/events/:id" element={<EventPage />} />
@@ -68,7 +79,14 @@ export default function App() {
         <Route path="/help" element={<HelpPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </Shell>
+      </Shell>
+      {desktop && (
+        <>
+          <Welcome />
+          {libraryAvailable !== false && <DriveNotice />}
+        </>
+      )}
+    </ImportProvider>
   )
 }
 
@@ -85,14 +103,15 @@ function Logo() {
 }
 
 /** Sidebar on desktop, bottom tab bar on phones. */
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ children, banner }: { children: React.ReactNode; banner?: React.ReactNode }) {
   const location = useLocation()
   // The map fills the screen; everything else gets normal page padding.
   const flush = location.pathname === '/map'
 
   return (
-    <div className="min-h-dvh lg:pl-60">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-line bg-panel/60 px-3 py-6 lg:flex">
+    <div className="min-h-dvh pt-[var(--tb)] lg:pl-60">
+      <TitleBar />
+      <aside className="fixed top-[var(--tb)] bottom-0 left-0 z-30 hidden w-60 flex-col border-r border-line bg-panel/60 px-3 py-6 lg:flex">
         <NavLink to="/" className="px-3">
           <Logo />
         </NavLink>
@@ -116,13 +135,16 @@ function Shell({ children }: { children: React.ReactNode }) {
         </nav>
       </aside>
 
-      <header className="sticky top-0 z-30 flex h-14 items-center border-b border-line bg-ink/85 px-4 backdrop-blur lg:hidden">
+      <header className="sticky top-[var(--tb)] z-30 flex h-14 items-center border-b border-line bg-ink/85 px-4 backdrop-blur lg:hidden">
         <NavLink to="/">
           <Logo />
         </NavLink>
       </header>
 
-      <main className={cx(flush ? '' : 'mx-auto max-w-[1500px] px-4 pt-5 sm:px-6 lg:px-8 lg:pt-8', 'pb-24 lg:pb-10')}>{children}</main>
+      <main className={cx(flush ? '' : 'mx-auto max-w-[1500px] px-4 pt-5 sm:px-6 lg:px-8 lg:pt-8', 'pb-24 lg:pb-10')}>
+        {banner && <div className={flush ? 'px-4 pt-4' : ''}>{banner}</div>}
+        {children}
+      </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-line bg-ink/90 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
         {NAV.filter((n) => !n.desktopOnly).map(({ to, label, icon: Icon, end }) => (
