@@ -1,0 +1,161 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+
+/* Palette borrowed from the car's own interface: near-black surfaces, white type, one red accent. */
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --color-ink: #0a0a0b;
+  --color-panel: #131315;
+  --color-raised: #1b1b1e;
+  --color-hover: #232327;
+  --color-line: #2a2a2f;
+  --color-line-strong: #3a3a41;
+
+  --color-fg: #f5f5f7;
+  --color-dim: #a1a1a8;
+  --color-faint: #6e6e76;
+
+  --color-accent: #e82127;
+  --color-accent-hover: #ff3d43;
+  --color-accent-soft: rgb(232 33 39 / 0.14);
+  --color-blue: #3e6ae1;
+  --color-ok: #30d158;
+  --color-warn: #ffb020;
+
+  --radius-card: 14px;
+}
+
+html {
+  color-scheme: dark;
+  background: var(--color-ink);
+}
+
+body {
+  margin: 0;
+  background: var(--color-ink);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+button,
+[role='button'] {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-fg);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: white;
+}
+
+/* Thin, quiet scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+
+input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-faint);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.skeleton {
+  background: linear-gradient(100deg, var(--color-raised) 40%, var(--color-hover) 50%, var(--color-raised) 60%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.rise {
+  animation: rise 0.25s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton,
+  .rise {
+    animation: none;
+  }
+}
+
+/* MapLibre controls, restyled to match. */
+.maplibregl-map {
+  font-family: var(--font-sans);
+}
+.maplibregl-ctrl-group {
+  background: var(--color-raised) !important;
+  border: 1px solid var(--color-line);
+  box-shadow: none !important;
+}
+.maplibregl-ctrl-group button + button {
+  border-top: 1px solid var(--color-line) !important;
+}
+.maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(1);
+}
+.maplibregl-ctrl-attrib {
+  background: rgb(10 10 11 / 0.7) !important;
+  color: var(--color-faint);
+}
+.maplibregl-ctrl-attrib a {
+  color: var(--color-dim) !important;
+}
+.maplibregl-popup-content {
+  background: var(--color-raised) !important;
+  color: var(--color-fg);
+  border: 1px solid var(--color-line);
+  border-radius: 12px !important;
+  padding: 0 !important;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.6) !important;
+}
+.maplibregl-popup-tip {
+  border-top-color: var(--color-raised) !important;
+  border-bottom-color: var(--color-raised) !important;
+}
+.maplibregl-popup-close-button {
+  color: var(--color-fg);
+  font-size: 18px;
+  padding: 2px 8px;
+  z-index: 2;
+}

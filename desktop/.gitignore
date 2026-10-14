@@ -1,0 +1,5 @@
+node_modules/
+out/
+dist/
+# Filled by scripts/prepare-server.mjs and scripts/fetch-ffmpeg.mjs at build time.
+resources/

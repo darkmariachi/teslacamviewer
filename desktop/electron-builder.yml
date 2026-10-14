@@ -1,0 +1,61 @@
+appId: app.teslacamviewer.desktop
+productName: TeslaCam Viewer
+copyright: TeslaCam Viewer contributors
+
+directories:
+  output: dist
+  buildResources: build
+
+# The compiled main and preload scripts; the web app ships inside the server.
+files:
+  - out/**
+  - build/icon.png
+  - package.json
+asar: true
+
+# Where the installed app looks for newer versions of itself. Nothing is uploaded from here: the
+# build workflow attaches the files to a release.
+publish:
+  provider: github
+  owner: darkmariachi
+  repo: teslacamviewer
+
+# The self-contained server (with the web app) and ffmpeg, prepared by scripts/prepare-server.mjs.
+extraResources:
+  - from: resources/server
+    to: server
+  - from: resources/ffmpeg
+    to: ffmpeg
+  - from: ../LICENSE
+    to: LICENSE
+  - from: ../THIRD_PARTY_NOTICES.md
+    to: THIRD_PARTY_NOTICES.md
+
+win:
+  icon: build/icon.png
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  artifactName: TeslaCam-Viewer-${version}-setup.${ext}
+
+portable:
+  artifactName: TeslaCam-Viewer-${version}-portable.${ext}
+
+linux:
+  icon: build/icon.png
+  category: AudioVideo
+  executableName: teslacam-viewer
+  synopsis: Browse your Tesla's Sentry and dashcam clips
+  artifactName: TeslaCam-Viewer-${version}-${arch}.${ext}
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: tar.gz
+      arch: [x64]
