@@ -10,65 +10,107 @@ public record ProbeResult(string Codec, int Width, int Height, double DurationSe
 public class FfmpegException(string message) : Exception(message);
 
 /// <summary>Thin wrapper around the ffmpeg/ffprobe binaries.</summary>
-public class Ffmpeg(SettingsService settings, ILogger<Ffmpeg> log)
+public class Ffmpeg(SettingsService settings, IConfiguration config, ILogger<Ffmpeg> log)
 {
     private const string VaapiDevice = "/dev/dri/renderD128";
-    private string? _detectedEncoder;
-    // Newer Intel chips only expose the low-power H.264 encoder.
+
+    /// <summary>Values the encoder setting accepts.</summary>
+    public static readonly string[] KnownEncoders = ["auto", "software", "vaapi", "qsv", "nvenc", "amf", "videotoolbox"];
+
+    private readonly SemaphoreSlim _detectLock = new(1);
+    private List<string>? _available;
+    // Newer Intel chips only expose the low-power H.264 encoder through VAAPI.
     private bool _vaapiLowPower;
     private string? _version;
 
     public string? Version => _version;
 
-    /// <summary>The encoder in use after resolving "auto": software or vaapi.</summary>
+    /// <summary>
+    /// ffmpeg and ffprobe come from TESLACAM_FFMPEG (a folder, used by the desktop app's bundled copy)
+    /// or from the PATH.
+    /// </summary>
+    private string Tool(string name)
+    {
+        var dir = config["TESLACAM_FFMPEG"];
+        if (string.IsNullOrEmpty(dir)) return name;
+        return Path.Combine(dir, OperatingSystem.IsWindows() ? name + ".exe" : name);
+    }
+
+    /// <summary>The encoder in use after resolving "auto": software or one of the hardware encoders.</summary>
     public async Task<string> ResolveEncoderAsync(CancellationToken ct = default)
     {
         var wanted = settings.Current.Encoder;
         if (wanted == "software") return "software";
-        _detectedEncoder ??= await DetectAsync(ct);
-        return wanted == "vaapi" && _detectedEncoder != "vaapi" ? "software" : _detectedEncoder;
+        var available = await DetectAsync(ct);
+        if (wanted == "auto") return available.FirstOrDefault() ?? "software";
+        return available.Contains(wanted) ? wanted : "software";
     }
 
-    public bool? HardwareAvailable => _detectedEncoder == null ? null : _detectedEncoder == "vaapi";
+    /// <summary>Null until detection has run.</summary>
+    public bool? HardwareAvailable => _available == null ? null : _available.Count > 0;
 
-    private async Task<string> DetectAsync(CancellationToken ct)
+    public IReadOnlyList<string> AvailableEncoders => _available ?? [];
+
+    /// <summary>The hardware encoders worth trying on this system, best first.</summary>
+    private static string[] Candidates() =>
+        OperatingSystem.IsMacOS() ? ["videotoolbox"]
+        : OperatingSystem.IsWindows() ? ["nvenc", "qsv", "amf"]
+        : ["vaapi", "nvenc", "qsv"];
+
+    /// <summary>Encodes half a second of test pattern with each candidate; the ones that work are available.</summary>
+    private async Task<List<string>> DetectAsync(CancellationToken ct)
     {
+        if (_available != null) return _available;
+        await _detectLock.WaitAsync(ct);
         try
         {
-            var (code, stdout, _) = await Exec("ffmpeg", ["-hide_banner", "-version"], ct);
-            if (code == 0) _version = stdout.Split('\n')[0].Replace("ffmpeg version ", "").Split(' ')[0];
-        }
-        catch (Exception ex)
-        {
-            log.LogError(ex, "ffmpeg is not available");
-            return "software";
-        }
-        if (!File.Exists(VaapiDevice)) return "software";
-        foreach (var lowPower in new[] { false, true })
-        {
+            if (_available != null) return _available;
             try
             {
-                string[] extra = lowPower ? ["-low_power", "1"] : [];
-                var (code, _, stderr) = await Exec("ffmpeg",
-                [
-                    "-hide_banner", "-v", "error", "-vaapi_device", VaapiDevice,
-                    "-f", "lavfi", "-i", "testsrc=size=640x480:rate=24", "-t", "0.5",
-                    "-vf", "format=nv12,hwupload", "-c:v", "h264_vaapi", .. extra, "-f", "null", "-",
-                ], ct);
-                if (code == 0)
-                {
-                    _vaapiLowPower = lowPower;
-                    log.LogInformation("Hardware encoding (VAAPI{Mode}) is available", lowPower ? ", low power" : "");
-                    return "vaapi";
-                }
-                log.LogInformation("VAAPI test encode failed{Mode}: {Err}", lowPower ? " (low power)" : "", Tail(stderr, 300));
+                var (code, stdout, _) = await Exec(Tool("ffmpeg"), ["-hide_banner", "-version"], ct);
+                if (code == 0) _version = stdout.Split('\n')[0].Replace("ffmpeg version ", "").Split(' ')[0];
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex)
             {
-                log.LogInformation("VAAPI probe failed: {Msg}", ex.Message);
+                log.LogError(ex, "ffmpeg is not available");
+                return _available = [];
             }
+            var found = new List<string>();
+            foreach (var encoder in Candidates())
+            {
+                if (encoder == "vaapi" && !File.Exists(VaapiDevice)) continue;
+                var variants = encoder == "vaapi" ? new[] { false, true } : [false];
+                foreach (var lowPower in variants)
+                {
+                    try
+                    {
+                        _vaapiLowPower = lowPower;
+                        var (code, _, stderr) = await Exec(Tool("ffmpeg"),
+                        [
+                            "-hide_banner", "-v", "error", .. GlobalArgs(encoder),
+                            "-f", "lavfi", "-i", "testsrc=size=640x480:rate=24", "-t", "0.5",
+                            "-vf", FilterTail(encoder), .. EncodeArgs(encoder, 27, 24), "-f", "null", "-",
+                        ], ct);
+                        if (code == 0)
+                        {
+                            found.Add(encoder);
+                            log.LogInformation("Hardware encoding ({Encoder}{Mode}) is available", encoder, lowPower ? ", low power" : "");
+                            break;
+                        }
+                        log.LogInformation("{Encoder} test encode failed: {Err}", encoder, Tail(stderr, 300));
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        log.LogInformation("{Encoder} probe failed: {Msg}", encoder, ex.Message);
+                    }
+                }
+            }
+            return _available = found;
         }
-        return "software";
+        finally
+        {
+            _detectLock.Release();
+        }
     }
 
     /// <summary>Arguments placed before the inputs.</summary>
@@ -76,22 +118,38 @@ public class Ffmpeg(SettingsService settings, ILogger<Ffmpeg> log)
         encoder == "vaapi" ? ["-vaapi_device", VaapiDevice] : [];
 
     /// <summary>Appended to the final video filter so frames reach the encoder in the right format.</summary>
-    public static string FilterTail(string encoder) =>
-        encoder == "vaapi" ? "format=nv12,hwupload" : "format=yuv420p";
+    public static string FilterTail(string encoder) => encoder switch
+    {
+        "vaapi" => "format=nv12,hwupload",
+        "qsv" or "amf" => "format=nv12",
+        _ => "format=yuv420p",
+    };
 
+    /// <summary>
+    /// Encoder arguments. <paramref name="quality"/> is on the x264 CRF scale (18 to 36, lower is better);
+    /// each hardware encoder gets its nearest equivalent.
+    /// </summary>
     public string[] EncodeArgs(string encoder, int quality, int fps)
     {
         var gop = (fps * 2).ToString();
-        string[] args = encoder == "vaapi"
-            ? ["-c:v", "h264_vaapi", .. (string[])(_vaapiLowPower ? ["-low_power", "1"] : []), "-qp", quality.ToString(), "-g", gop]
-            : ["-c:v", "libx264", "-preset", "veryfast", "-crf", quality.ToString(), "-g", gop];
+        var q = quality.ToString();
+        string[] args = encoder switch
+        {
+            "vaapi" => ["-c:v", "h264_vaapi", .. (string[])(_vaapiLowPower ? ["-low_power", "1"] : []), "-qp", q, "-g", gop],
+            "nvenc" => ["-c:v", "h264_nvenc", "-preset", "p4", "-rc", "vbr", "-cq", q, "-b:v", "0", "-g", gop],
+            "qsv" => ["-c:v", "h264_qsv", "-global_quality", q, "-g", gop],
+            "amf" => ["-c:v", "h264_amf", "-rc", "cqp", "-qp_i", q, "-qp_p", q, "-g", gop],
+            // VideoToolbox's quality runs the other way, from 1 to 100.
+            "videotoolbox" => ["-c:v", "h264_videotoolbox", "-q:v", Math.Clamp(100 - (quality - 18) * 3, 30, 95).ToString(), "-g", gop],
+            _ => ["-c:v", "libx264", "-preset", "veryfast", "-crf", q, "-g", gop],
+        };
         var threads = settings.Current.FfmpegThreads;
-        return threads > 0 ? [.. args, "-threads", threads.ToString()] : args;
+        return threads > 0 && encoder == "software" ? [.. args, "-threads", threads.ToString()] : args;
     }
 
     public async Task<ProbeResult?> ProbeAsync(string file, CancellationToken ct)
     {
-        var (code, stdout, _) = await Exec("ffprobe",
+        var (code, stdout, _) = await Exec(Tool("ffprobe"),
         [
             "-v", "error", "-select_streams", "v:0",
             "-show_entries", "stream=codec_name,width,height:format=duration",
@@ -125,9 +183,10 @@ public class Ffmpeg(SettingsService settings, ILogger<Ffmpeg> log)
     public async Task RunAsync(IEnumerable<string> args, Action<double>? onProgress, CancellationToken ct)
     {
         string[] full = ["-hide_banner", "-nostdin", "-y", "-v", "error", "-progress", "pipe:1", "-nostats", .. args];
+        var ffmpeg = Tool("ffmpeg");
         var psi = OperatingSystem.IsWindows()
-            ? new ProcessStartInfo("ffmpeg")
-            : new ProcessStartInfo("nice") { ArgumentList = { "-n", "15", "ffmpeg" } };
+            ? new ProcessStartInfo(ffmpeg)
+            : new ProcessStartInfo("nice") { ArgumentList = { "-n", "15", ffmpeg } };
         foreach (var a in full) psi.ArgumentList.Add(a);
         psi.RedirectStandardOutput = true;
         psi.RedirectStandardError = true;

@@ -104,7 +104,7 @@ public partial class ArchiverService(IDbContextFactory<AppDb> dbf, SettingsServi
 
     public async Task PollAsync(CancellationToken ct)
     {
-        var url = settings.Current.ArchiverUrl;
+        var url = settings.Current.TeslausbEnabled == true ? settings.Current.ArchiverUrl : null;
         ArchiverStatus? status = null;
         if (url != null)
         {
@@ -178,7 +178,8 @@ public partial class ArchiverService(IDbContextFactory<AppDb> dbf, SettingsServi
     /// <summary>Asks teslausb to start archiving now instead of waiting for its own schedule.</summary>
     public async Task TriggerSyncAsync(CancellationToken ct)
     {
-        var url = settings.Current.ArchiverUrl ?? throw new InvalidOperationException("No teslausb address is configured.");
+        var url = (settings.Current.TeslausbEnabled == true ? settings.Current.ArchiverUrl : null)
+                  ?? throw new InvalidOperationException("No teslausb address is configured.");
         using var client = http.CreateClient();
         client.Timeout = TimeSpan.FromSeconds(10);
         using var response = await client.GetAsync($"{url}/cgi-bin/trigger_sync.sh", ct);

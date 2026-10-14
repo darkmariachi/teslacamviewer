@@ -30,7 +30,7 @@ public record AppSettings
     public int HomeCleanupDays { get; init; } = 3;
     /// <summary>0 lets ffmpeg decide.</summary>
     public int FfmpegThreads { get; init; }
-    /// <summary>auto | software | vaapi</summary>
+    /// <summary>auto | software | vaapi | qsv | nvenc | amf | videotoolbox</summary>
     public string Encoder { get; init; } = "auto";
     public int PreviewCellHeight { get; init; } = 480;
     public int PreviewFps { get; init; } = 24;
@@ -40,12 +40,17 @@ public record AppSettings
     public string? WebhookUrl { get; init; }
     /// <summary>Address of the teslausb web interface on the home network, e.g. http://teslausb.local.</summary>
     public string? ArchiverUrl { get; init; }
+    /// <summary>
+    /// Whether clips arrive through teslausb, which turns on the Car tab and status polling. Unset on
+    /// installs from before the switch existed; those count as using it when an address is filled in.
+    /// </summary>
+    public bool? TeslausbEnabled { get; init; }
 
     public AppSettings Sanitized() => this with
     {
         PreviewPolicy = PreviewPolicy is "all" or "recent" or "ondemand" ? PreviewPolicy : "recent",
         TranscodePolicy = TranscodePolicy is "auto" or "ondemand" ? TranscodePolicy : "auto",
-        Encoder = Encoder is "auto" or "software" or "vaapi" ? Encoder : "auto",
+        Encoder = Ffmpeg.KnownEncoders.Contains(Encoder) ? Encoder : "auto",
         PreviewRecentDays = Math.Clamp(PreviewRecentDays, 1, 3650),
         WorkHoursStart = Math.Clamp(WorkHoursStart, 0, 23),
         WorkHoursEnd = Math.Clamp(WorkHoursEnd, 0, 23),
@@ -63,6 +68,7 @@ public record AppSettings
         PreviewQuality = Math.Clamp(PreviewQuality, 18, 36),
         WebhookUrl = string.IsNullOrWhiteSpace(WebhookUrl) ? null : WebhookUrl.Trim(),
         ArchiverUrl = NormalizeUrl(ArchiverUrl),
+        TeslausbEnabled = TeslausbEnabled ?? NormalizeUrl(ArchiverUrl) != null,
     };
 
     /// <summary>Accepts "teslausb.local" as well as a full URL; returns null when it is not a usable http address.</summary>

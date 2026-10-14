@@ -10,12 +10,18 @@ using TeslaCam.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// The desktop app's server only answers requests addressed to this computer, so a web page can't reach
+// it by pointing a domain name at 127.0.0.1.
+if (!string.IsNullOrEmpty(builder.Configuration[DesktopMode.TokenKey]))
+    builder.Configuration["AllowedHosts"] = "127.0.0.1;localhost";
+
 var paths = new AppPaths(builder.Configuration);
 builder.Services.AddSingleton(paths);
 builder.Services.AddDbContextFactory<AppDb>(o => o.UseSqlite($"Data Source={paths.DbFile};Default Timeout=30",
     sqlite => sqlite.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
 builder.Services.AddHttpClient();
 
+builder.Services.AddSingleton<DesktopMode>();
 builder.Services.AddSingleton<SettingsService>();
 builder.Services.AddSingleton<AuthService>();
 builder.Services.AddSingleton<StorageService>();
@@ -26,6 +32,7 @@ builder.Services.AddSingleton<Scanner>();
 builder.Services.AddSingleton<JobRunner>();
 builder.Services.AddSingleton<TrashService>();
 builder.Services.AddSingleton<ArchiverService>();
+builder.Services.AddSingleton<ImportService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<Scanner>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<JobRunner>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<TrashService>());
@@ -78,6 +85,8 @@ app.UseForwardedHeaders();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseAuthentication();
+var desktop = app.Services.GetRequiredService<DesktopMode>();
+if (desktop.Enabled) app.Use((ctx, next) => desktop.Authenticate(ctx, next));
 app.UseAuthorization();
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
@@ -87,6 +96,7 @@ app.MapMediaApi();
 app.MapCollectionsApi();
 app.MapAdminApi();
 app.MapArchiverApi();
+app.MapImportApi();
 
 // Unknown API paths are errors; every other path belongs to the single-page app.
 app.MapFallback("/api/{**path}", () => Results.NotFound());

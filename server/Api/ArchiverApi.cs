@@ -23,7 +23,8 @@ public static class ArchiverApi
 
         group.MapGet("", async (AppDb db, ArchiverService archiver, SettingsService settings) =>
         {
-            var url = settings.Current.ArchiverUrl;
+            var enabled = settings.Current.TeslausbEnabled == true;
+            var url = enabled ? settings.Current.ArchiverUrl : null;
             var sessions = await db.ArchiverSessions.AsNoTracking().OrderByDescending(s => s.Id).Take(15).ToListAsync();
             var syncs = await db.ArchiverSyncs.AsNoTracking().OrderByDescending(s => s.Id).Take(15).ToListAsync();
             var latest = sessions.FirstOrDefault();
@@ -33,6 +34,7 @@ public static class ArchiverApi
 
             return Results.Ok(new
             {
+                enabled,
                 configured = url != null,
                 url,
                 hookPath = $"/api/archiver/hook/{await archiver.GetTokenAsync()}",

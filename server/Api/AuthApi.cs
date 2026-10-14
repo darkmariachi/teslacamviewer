@@ -14,15 +14,19 @@ public static class AuthApi
     {
         var group = app.MapGroup("/api/auth");
 
-        group.MapGet("/status", async (HttpContext ctx, AuthService auth) => Results.Ok(new
+        group.MapGet("/status", async (HttpContext ctx, AuthService auth, DesktopMode desktop, AppPaths paths) => Results.Ok(new
         {
-            setupRequired = !await auth.IsConfiguredAsync(),
+            // The desktop app has no password; its window is signed in by a cookie.
+            setupRequired = !desktop.Enabled && !await auth.IsConfiguredAsync(),
             authenticated = ctx.User.Identity?.IsAuthenticated == true,
+            desktop = desktop.Enabled,
+            libraryFolder = desktop.Enabled && ctx.User.Identity?.IsAuthenticated == true ? paths.Root : null,
         }));
 
         // First run only: choose the password.
-        group.MapPost("/setup", async (PasswordRequest req, HttpContext ctx, AuthService auth) =>
+        group.MapPost("/setup", async (PasswordRequest req, HttpContext ctx, AuthService auth, DesktopMode desktop) =>
         {
+            if (desktop.Enabled) return Results.NotFound();
             if (await auth.IsConfiguredAsync()) return Results.Conflict(new { error = "A password is already set." });
             // Until a password exists the app is open, so only someone on the local network may claim it.
             if (!IsLocal(ctx.Connection.RemoteIpAddress) && ctx.RequestServices.GetRequiredService<IConfiguration>()["TESLACAM_ALLOW_REMOTE_SETUP"] != "true")
@@ -33,8 +37,9 @@ public static class AuthApi
             return Results.Ok();
         });
 
-        group.MapPost("/login", async (PasswordRequest req, HttpContext ctx, AuthService auth) =>
+        group.MapPost("/login", async (PasswordRequest req, HttpContext ctx, AuthService auth, DesktopMode desktop) =>
         {
+            if (desktop.Enabled) return Results.NotFound();
             var client = ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             var locked = auth.LockedForSeconds(client);
             if (locked > 0)
