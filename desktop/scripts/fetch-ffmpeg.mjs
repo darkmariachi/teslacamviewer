@@ -16,7 +16,7 @@ const windows = platform === 'win64'
 const headers = { 'User-Agent': 'teslacamviewer-build', ...(process.env.GITHUB_TOKEN ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` } : {}) }
 const release = await (await fetch('https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/tags/latest', { headers })).json()
 // Release builds look like ffmpeg-n7.1-latest-win64-lgpl-7.1.zip; take the newest version.
-const pattern = new RegExp(`^ffmpeg-n([\d.]+)-latest-${platform}-lgpl-[\d.]+\.(zip|tar\.xz)$`)
+const pattern = new RegExp(String.raw`^ffmpeg-n([\d.]+)-latest-${platform}-lgpl-[\d.]+\.(zip|tar\.xz)$`)
 const asset = release.assets
   .filter((a) => pattern.test(a.name))
   .sort((a, b) => compareVersions(b.name.match(pattern)[1], a.name.match(pattern)[1]))[0]
