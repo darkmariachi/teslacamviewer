@@ -56,6 +56,20 @@ public class HomeCleanupTests
     }
 
     [Fact]
+    public void The_webhook_skips_home_events_only_while_the_home_rule_is_on()
+    {
+        var now = new DateTime(2026, 10, 13, 16, 0, 0);
+
+        Assert.False(Scanner.ShouldNotify(Sentry(30.267, -97.7841), Home, now));
+        Assert.True(Scanner.ShouldNotify(Sentry(30.267, -97.7841), Home with { HomeCleanupEnabled = false }, now));
+        // Away from home, and bumps at home, still notify.
+        Assert.True(Scanner.ShouldNotify(Sentry(30.2672, -97.7431), Home, now));
+        Assert.True(Scanner.ShouldNotify(Sentry(30.267, -97.7841, "sentry_aware_accel"), Home, now));
+        // Old footage arriving from an archive never notifies.
+        Assert.False(Scanner.ShouldNotify(Sentry(30.2672, -97.7431), Home, now.AddDays(2)));
+    }
+
+    [Fact]
     public void A_home_location_without_both_coordinates_is_dropped()
     {
         Assert.Null(new AppSettings { HomeLat = 30.267 }.Sanitized().HomeLat);

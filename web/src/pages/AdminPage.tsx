@@ -540,7 +540,10 @@ function SettingsForm() {
         title="Sentry at home"
         description="Leaving Sentry on at home keeps the car's USB port powered so uploads finish, but it records everyone who walks past. Those events can clean themselves up."
       >
-        <Row label="Clean up Sentry events recorded at home" hint="Favorites, events in a collection and bumps (something touched the car) are always kept.">
+        <Row
+          label="Clean up Sentry events recorded at home"
+          hint="Favorites, events in a collection and bumps (something touched the car) are always kept. While this is on, the webhook skips home events too, except bumps."
+        >
           <Toggle label="Clean up home events" checked={draft.homeCleanupEnabled} onChange={(v) => set({ homeCleanupEnabled: v })} />
         </Row>
         <Field label="Home location" hint={draft.homeLat == null ? 'Open an event recorded at home and choose "This is home" from its menu.' : undefined}>
@@ -567,7 +570,10 @@ function SettingsForm() {
       </Section>
 
       <Section title="Notifications" description="Get a call when the car records a new Sentry event, for example into a Home Assistant webhook.">
-        <Field label="Webhook URL" hint="Receives a JSON POST with the event's time, place and reason. Leave empty to turn off.">
+        <Field
+          label="Webhook URL"
+          hint="Receives a JSON POST with the event's time, place and reason. Skips events at home while their clean-up is on, except bumps. Leave empty to turn off."
+        >
           <input value={draft.webhookUrl ?? ''} onChange={(e) => set({ webhookUrl: e.target.value || null })} placeholder="https://…" className={inputClass} />
         </Field>
       </Section>

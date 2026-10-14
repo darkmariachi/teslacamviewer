@@ -344,13 +344,21 @@ public partial class Scanner(IDbContextFactory<AppDb> dbf, AppPaths paths, JobQu
         }
     }
 
-    /// <summary>Tells the configured webhook about Sentry events that just happened (not about an imported archive).</summary>
+    /// <summary>
+    /// Whether a newly indexed event is worth a webhook call: a Sentry event from the last day (not an imported
+    /// archive), and not one the home rule will clean up anyway. Bumps at home still count.
+    /// </summary>
+    public static bool ShouldNotify(Event e, AppSettings s, DateTime now) =>
+        e.Type == EventType.Sentry && e.StartTime >= now.AddHours(-24) && HomeCleanup.DueAt(e, s) == null;
+
+    /// <summary>Tells the configured webhook about Sentry events that just happened.</summary>
     private async Task NotifyAsync(List<Event> fresh)
     {
-        var url = settings.Current.WebhookUrl;
+        var s = settings.Current;
+        var url = s.WebhookUrl;
         if (url == null) return;
-        var cutoff = DateTime.Now.AddHours(-24);
-        foreach (var ev in fresh.Where(e => e.Type == EventType.Sentry && e.StartTime >= cutoff).Take(10))
+        var now = DateTime.Now;
+        foreach (var ev in fresh.Where(e => ShouldNotify(e, s, now)).Take(10))
         {
             try
             {

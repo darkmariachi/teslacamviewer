@@ -33,7 +33,8 @@ a fast, phone-friendly library with a synced multi-camera player.
   anything in a collection.
 - **Six-camera cars** – pillar cameras are picked up automatically and laid out as a 3 × 2 grid.
 - **HEVC** – clips in a codec browsers may not play get H.264 copies; the originals are never modified.
-- **Webhook** – optional JSON POST when a new Sentry event arrives (handy for Home Assistant).
+- **Webhook** – optional JSON POST when a new Sentry event arrives (handy for Home Assistant). Events at home
+  are skipped while their clean-up is on, except bumps.
 - **Car status** – if you archive with teslausb, see whether the car is home, when it last connected, whether an
   upload is running, and the device's Wi-Fi, temperature, power and free space. See [teslausb](#teslausb).
 
