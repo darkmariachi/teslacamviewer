@@ -32,7 +32,7 @@ public class HomeCleanupTests
     [Fact]
     public void Events_away_from_home_bumps_favorites_and_collected_events_are_kept()
     {
-        Assert.Null(HomeCleanup.DueAt(Sentry(30.2673, -97.7354), Home));
+        Assert.Null(HomeCleanup.DueAt(Sentry(30.2672, -97.7431), Home));
         Assert.Null(HomeCleanup.DueAt(Sentry(30.267, -97.7841, "sentry_aware_accel"), Home));
         Assert.Null(HomeCleanup.DueAt(Sentry(30.267, -97.7841, "sentry_panic_accel"), Home));
 

@@ -151,7 +151,7 @@ public sealed class ScannerTests : IDisposable
         Clip("SentryClips/2026-10-01_11-00-00", "2026-10-01_10-59-00-front.mp4");
         EventJson("SentryClips/2026-10-01_11-00-00", home + ",\"reason\":\"sentry_aware_accel_0.61\"}");
         Clip("SentryClips/2026-10-01_12-00-00", "2026-10-01_11-59-00-front.mp4");
-        EventJson("SentryClips/2026-10-01_12-00-00", "{\"est_lat\":\"30.2673\",\"est_lon\":\"-97.7354\",\"reason\":\"sentry_aware_object_detection\"}");
+        EventJson("SentryClips/2026-10-01_12-00-00", "{\"est_lat\":\"30.2672\",\"est_lon\":\"-97.7431\",\"reason\":\"sentry_aware_object_detection\"}");
         await Scanner.ScanAsync(CancellationToken.None);
         await _services.GetRequiredService<SettingsService>().SaveAsync(
             new AppSettings { HomeLat = 30.267, HomeLon = -97.7841, HomeCleanupEnabled = true, HomeCleanupDays = 3 });
