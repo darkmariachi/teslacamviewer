@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, FolderOpen, HardDrive, Upload } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, FolderOpen, HardDrive, Upload } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { api, desktopBridge, uploadClip, type ImportCheck, type ImportStatus } from '../api'
 import { formatBytes } from '../lib/format'
 import { Button, Modal, ProgressBar, Spinner, Toggle } from './ui'
@@ -9,10 +10,10 @@ import { Button, Modal, ProgressBar, Spinner, Toggle } from './ui'
  * Brings clips from the car's USB drive (or a copy of it) into the library. In the desktop app the
  * server copies the drive itself; in a browser the files are uploaded one by one.
  */
-export function ImportDialog({ desktop, onClose }: { desktop: boolean; onClose: () => void }) {
+export function ImportDialog({ desktop, initialSource, onClose }: { desktop: boolean; initialSource?: string; onClose: () => void }) {
   return (
     <Modal title="Import clips" onClose={onClose} wide>
-      {desktop ? <DesktopImport /> : <BrowserImport />}
+      {desktop ? <DesktopImport initialSource={initialSource} /> : <BrowserImport />}
     </Modal>
   )
 }
@@ -205,7 +206,7 @@ function BrowserImport() {
 // ---------------------------------------------------------------------------------------------------------------
 // Desktop app: the server reads the drive directly.
 
-function DesktopImport() {
+function DesktopImport({ initialSource }: { initialSource?: string }) {
   const refreshLibrary = useRefreshLibrary()
   const drives = useQuery({ queryKey: ['import-drives'], queryFn: api.importDrives, refetchInterval: 4000 })
   const status = useQuery({
@@ -214,7 +215,7 @@ function DesktopImport() {
     refetchInterval: (q) => (q.state.data?.running ? 800 : false),
   })
   const [source, setSource] = useState<string | null>(null)
-  const [plan, setPlan] = useState<{ files: number; bytes: number; alreadyThere: number } | null>(null)
+  const [plan, setPlan] = useState<{ files: number; bytes: number; alreadyThere: number; encrypted: number } | null>(null)
   const [deleteAfter, setDeleteAfter] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -241,6 +242,12 @@ function DesktopImport() {
       setBusy(false)
     }
   }
+
+  // Opened from the notice that a drive was plugged in: go straight to that drive.
+  useEffect(() => {
+    if (initialSource) choose(initialSource)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSource])
 
   async function start() {
     if (!source) return
@@ -277,7 +284,9 @@ function DesktopImport() {
                 >
                   <HardDrive className="size-5 shrink-0 text-dim" />
                   <span className="min-w-0 flex-1 truncate text-sm font-medium">{d.name}</span>
-                  <span className="text-xs text-faint">{formatBytes(d.totalBytes)}</span>
+                  <span className="text-xs text-faint">
+                    {d.newFiles > 0 ? `${d.newFiles.toLocaleString()} new · ${formatBytes(d.newBytes)}` : 'Nothing new'}
+                  </span>
                 </button>
               ))
             ) : (
@@ -296,11 +305,24 @@ function DesktopImport() {
           {busy || !plan ? (
             <Spinner />
           ) : plan.files === 0 ? (
-            <p className="text-sm">Everything here is already in your library.</p>
+            <p className="text-sm">Nothing new here: everything on it is already in your library.</p>
           ) : (
             <p className="text-sm">
               <strong>{plan.files.toLocaleString()} new files</strong> ({formatBytes(plan.bytes)}) to copy.
               {plan.alreadyThere > 0 && <span className="text-dim"> {plan.alreadyThere.toLocaleString()} are already in the library.</span>}
+            </p>
+          )}
+          {plan && plan.encrypted > 0 && (
+            <p className="flex items-start gap-2 rounded-lg bg-warn/10 p-3 text-[13px]">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warn" />
+              <span>
+                {plan.encrypted === 1
+                  ? "1 clip was encrypted by the car and can't be imported. It stays on the drive."
+                  : `${plan.encrypted.toLocaleString()} clips were encrypted by the car and can't be imported. They stay on the drive.`}{' '}
+                <Link to="/help#encryption" className="underline">
+                  How to turn encryption off
+                </Link>
+              </span>
             </p>
           )}
           {plan && (

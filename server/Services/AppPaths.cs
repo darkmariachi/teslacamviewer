@@ -43,6 +43,18 @@ public class AppPaths
         }
     }
 
+    /// <summary>
+    /// Every folder clips are read from: the clip base, then a TeslaCam folder inside it. The second happens when
+    /// someone drags the whole folder off the car's drive into a library that already has clips.
+    /// </summary>
+    public IEnumerable<string> ClipBases()
+    {
+        var main = ClipsBase;
+        yield return main;
+        var nested = Path.Combine(main, "TeslaCam");
+        if (Directory.Exists(nested)) yield return nested;
+    }
+
     public string TrashDir => Path.Combine(ClipsBase, TrashDirName);
     public string ExportsDir => Path.Combine(Cache, "exports");
 

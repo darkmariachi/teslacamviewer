@@ -129,9 +129,11 @@ The builds are not code-signed, so Windows SmartScreen shows a warning the first
 - `TeslaCam-Viewer-<version>-x86_64.AppImage`: make it executable (`chmod +x`) and run it.
 - `TeslaCam-Viewer-<version>-x64.tar.gz`: unpack anywhere and run `teslacam-viewer` inside.
 
-Clips are kept in `Videos/TeslaCam Viewer` unless you choose another folder in Admin → Library. The app includes
+The first start asks whether to start a new library in `Videos/TeslaCam Viewer` or to use a folder you already
+keep clips in (see [The desktop app's library folder](#the-desktop-apps-library-folder)). The app includes
 everything it needs, ffmpeg included, and updates itself from GitHub releases (the Windows installer and the
-AppImage).
+AppImage). Its window has its own title bar: the menu button at its left holds the app menu, and the lights at its
+right minimize, maximize and close.
 
 The desktop app only answers on the computer it runs on. To watch from a phone or another computer, use the
 server.
@@ -185,13 +187,37 @@ whole responses. Importing in the browser uploads clips of 30 to 40 MB each, so 
 Your Tesla records onto the USB drive in the glovebox, in a folder called `TeslaCam`. There are three ways to
 bring the clips in:
 
-1. **Import from the USB drive.** Choose **Import** on the Events page. In the desktop app, a plugged-in drive is
-   listed by itself, and its clips can be cleared afterwards so the car has room again. In a browser, choose the
-   drive or its `TeslaCam` folder and the new clips are uploaded to the server. Clips already in the library are
-   skipped either way.
+1. **Import from the USB drive.** Choose **Import** on the Events page. In the desktop app, plugging the drive in
+   is enough: the app offers to import whatever on it is new, also when the drive was already plugged in as the app
+   opened, and its clips can be cleared afterwards so the car has room again. In a browser, choose the drive or its
+   `TeslaCam` folder and the new clips are uploaded to the server. Clips already in the library are skipped either
+   way.
 2. **Automatically, with teslausb.** See [teslausb](#teslausb).
 3. **Copy the folders yourself** into the clip folder (the server's `/teslacam`, or the desktop app's library
-   folder). It is checked every five minutes; Admin → Library → "Scan now" checks straight away.
+   folder). It is checked every five minutes; Admin → Library → "Scan now" checks straight away. Dragging the
+   drive's whole `TeslaCam` folder in works too; an event that is in both places is listed once.
+
+### The desktop app's library folder
+
+On first start the desktop app asks where clips should live: a new library in `Videos/TeslaCam Viewer`, or **a
+folder you already keep clips in**, which it reads where they are without copying anything. Admin → Library
+switches folders later. Each folder keeps its own notes, favorites and collections, so switching back loses
+nothing.
+
+How it handles the awkward cases:
+
+- **Clips copied or moved in while the app was closed** are picked up when it opens. If the drive is still plugged
+  in, only what didn't make it across is offered for import, and clearing the drive afterwards removes only what is
+  safely in the library. An interrupted copy is finished by importing again, since a file of the wrong size is
+  copied again.
+- **The library folder is missing** (an unplugged drive, a renamed folder): the app says so, keeps everything it
+  knows, never creates an empty folder in its place, and recovers by itself when the folder comes back.
+- **A folder on a removable drive, or the car's own drive,** gets a warning before it is used, since the library
+  would disappear whenever the drive does.
+- **The library itself is never offered as an import source,** so "clear the drive" can't empty it.
+- **Clips the car encrypted** are counted and explained, and left on the drive.
+- **The drive is unplugged during an import:** what was copied is kept, the import stops with a message, and the
+  drive is not cleared.
 
 The clip folder looks like what the car writes:
 
@@ -318,7 +344,8 @@ the app makes lives in its data folder: `/data` for the server, `%APPDATA%\Tesla
 | `cache/exports/`                | Exported clips                                          |
 
 Deleted and trimmed clips go to `.trash/` inside the clip folder. The desktop app also keeps `config.json` (its
-library folder and window position) and `logs/` next to the data folder. [PRIVACY.md](PRIVACY.md) lists
+library folder and window position) and `logs/` next to the data folder. Each library folder it has used gets
+its own data folder (`data`, then `data-<id>`), listed in `config.json`. [PRIVACY.md](PRIVACY.md) lists
 everything the app stores and connects to.
 
 ## Troubleshooting

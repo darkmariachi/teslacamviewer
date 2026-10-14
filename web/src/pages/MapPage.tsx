@@ -134,7 +134,7 @@ export default function MapPage() {
   }, [ready, points.data, byId, focusId])
 
   return (
-    <div className="relative h-[calc(100dvh-7rem-env(safe-area-inset-bottom))] lg:h-dvh">
+    <div className="relative h-[calc(100dvh-7rem-env(safe-area-inset-bottom)-var(--tb))] lg:h-[calc(100dvh-var(--tb))]">
       {/* Sized explicitly: MapLibre sets position: relative on its container, which would collapse an inset-0 box. */}
       <div ref={node} className="size-full bg-ink" />
 

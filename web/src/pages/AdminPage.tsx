@@ -10,6 +10,7 @@ import {
   Badge, Button, Card, ConfirmDialog, EmptyState, Field, IconButton, PageHeader, ProgressBar, Segmented, Spinner, Toggle, inputClass,
 } from '../components/ui'
 import CarTab from './CarTab'
+import { ChooseLibraryFolder } from '../components/Library'
 
 type Tab = 'processing' | 'car' | 'library' | 'settings' | 'trash' | 'account'
 
@@ -438,6 +439,7 @@ function Library({ overview, libraryFolder }: { overview: Overview; libraryFolde
 /** Desktop app only: where the library lives, and moving it. */
 function LibraryFolder({ path }: { path: string }) {
   const bridge = desktopBridge()
+  const [choosing, setChoosing] = useState(false)
   return (
     <div className="mt-5 border-t border-line pt-5">
       <p className="label">Library folder</p>
@@ -448,11 +450,15 @@ function LibraryFolder({ path }: { path: string }) {
           <Button size="sm" onClick={() => bridge.showFolder(path)}>
             Open folder
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => bridge.changeLibraryFolder()}>
+          <Button size="sm" variant="ghost" onClick={() => setChoosing(true)}>
             Use another folder…
           </Button>
         </div>
       )}
+      <p className="mt-3 text-xs text-faint">
+        Switching keeps each folder's notes, favorites and collections, so you can switch back. Clips are not moved.
+      </p>
+      {choosing && <ChooseLibraryFolder onCancel={() => setChoosing(false)} />}
     </div>
   )
 }

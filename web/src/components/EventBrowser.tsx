@@ -252,7 +252,7 @@ export function EventBrowser({ fixed, empty, extraBulk }: Props) {
         {groups.map((group) => (
           <section key={group.key} className="mb-8">
             {group.title && (
-              <h2 className="sticky top-14 z-20 -mx-1 mb-3 bg-ink/90 px-1 py-2 text-[13px] font-semibold text-dim backdrop-blur lg:top-0">
+              <h2 className="sticky top-[calc(3.5rem+var(--tb))] z-20 -mx-1 mb-3 bg-ink/90 px-1 py-2 text-[13px] font-semibold text-dim backdrop-blur lg:top-[var(--tb)]">
                 {group.title}
                 <span className="ml-2 font-normal text-faint">{group.items.length}</span>
               </h2>

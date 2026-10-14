@@ -4,7 +4,8 @@ namespace TeslaCam.Services;
 
 public record ImportFile(string Path, long Size);
 
-public record ImportPlan(List<ImportFile> Missing, int AlreadyThere, int Ignored)
+/// <summary>What an import would do. <see cref="Encrypted"/> counts clips the car encrypted, which can't be imported.</summary>
+public record ImportPlan(List<ImportFile> Missing, int AlreadyThere, int Ignored, int Encrypted = 0)
 {
     public long MissingBytes => Missing.Sum(f => f.Size);
 }
@@ -28,7 +29,11 @@ public class ImportState
     public DateTime? FinishedUtc { get; set; }
 }
 
-public record ImportDrive(string Path, string Name, long TotalBytes);
+/// <summary>A drive with the car's clips on it, and what importing it would bring in.</summary>
+public record ImportDrive(string Path, string Name, long TotalBytes, int NewFiles, long NewBytes, int Encrypted);
+
+/// <summary>What is in a folder someone is about to use as their library.</summary>
+public record FolderInfo(bool Exists, string? ClipRoot, int Events, int Encrypted, bool Removable, bool IsLibrary);
 
 /// <summary>
 /// Brings clips into the library: files uploaded from a browser, or a folder or USB drive copied by the
@@ -39,6 +44,8 @@ public record ImportDrive(string Path, string Name, long TotalBytes);
 public partial class ImportService(AppPaths paths, Scanner scanner, ILogger<ImportService> log)
 {
     private static readonly string[] ClipFolders = ["SentryClips", "SavedClips", "RecentClips"];
+    private const string EncryptedFolder = "EncryptedClips";
+    private static readonly TimeSpan DriveCacheTime = TimeSpan.FromSeconds(30);
 
     [GeneratedRegex(@"^(SentryClips|SavedClips)/[^/]+/(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}-(front|back|left_repeater|right_repeater|left_pillar|right_pillar)\.mp4|event\.json|event\.mp4|thumb\.png)$")]
     private static partial Regex EventFile();
@@ -48,7 +55,10 @@ public partial class ImportService(AppPaths paths, Scanner scanner, ILogger<Impo
     private static partial Regex RecentFile();
 
     private readonly Lock _lock = new();
+    private readonly Dictionary<string, (DateTime At, long FreeBytes, int Generation, ImportPlan Plan)> _driveCache = [];
     private CancellationTokenSource? _cts;
+    // Bumped whenever the library gains files, so cached drive plans are worked out again.
+    private int _generation;
 
     public ImportState State { get; private set; } = new();
 
@@ -68,10 +78,40 @@ public partial class ImportService(AppPaths paths, Scanner scanner, ILogger<Impo
 
     private string Destination(string relative) => Path.Combine(paths.ClipsBase, relative.Replace('/', Path.DirectorySeparatorChar));
 
+    /// <summary>
+    /// Whether the library has this file already. It may sit in a TeslaCam folder someone dragged into the
+    /// library by hand, which the scanner reads too.
+    /// </summary>
     private bool AlreadyThere(string relative, long size)
     {
-        var dest = new FileInfo(Destination(relative));
-        return dest.Exists && dest.Length == size;
+        foreach (var dir in paths.ClipBases())
+        {
+            var file = new FileInfo(Path.Combine(dir, relative.Replace('/', Path.DirectorySeparatorChar)));
+            if (file.Exists && file.Length == size) return true;
+        }
+        return false;
+    }
+
+    /// <summary>True when one folder is the other or inside it.</summary>
+    public static bool Overlaps(string a, string b)
+    {
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        static string Full(string p) => Path.TrimEndingDirectorySeparator(Path.GetFullPath(p)) + Path.DirectorySeparatorChar;
+        var fa = Full(a);
+        var fb = Full(b);
+        return fa.StartsWith(fb, comparison) || fb.StartsWith(fa, comparison);
+    }
+
+    private void EnsureLibraryAvailable()
+    {
+        if (!Directory.Exists(paths.Root))
+            throw new InvalidOperationException($"The library folder {paths.Root} isn't available. Reconnect the drive it's on, or choose another folder.");
+    }
+
+    private void EnsureNotLibrary(string folder)
+    {
+        if (Overlaps(folder, paths.Root))
+            throw new InvalidOperationException("That folder is your library folder, or is inside it. Choose the car's USB drive or a copy of it.");
     }
 
     /// <summary>Which of these files the library still needs.</summary>
@@ -93,6 +133,7 @@ public partial class ImportService(AppPaths paths, Scanner scanner, ILogger<Impo
     public async Task SaveAsync(string path, Stream body, long? expectedSize, DateTimeOffset? modified, CancellationToken ct)
     {
         var relative = Normalize(path) ?? throw new InvalidOperationException($"{path} is not a file the car writes.");
+        EnsureLibraryAvailable();
         if (expectedSize is { } size && AlreadyThere(relative, size)) return;
         var dest = Destination(relative);
         Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
@@ -106,6 +147,7 @@ public partial class ImportService(AppPaths paths, Scanner scanner, ILogger<Impo
             File.Move(temp, dest, true);
             // Keep the car's timestamp so the folder counts as finished straight away.
             if (modified is { } when) File.SetLastWriteTimeUtc(dest, when.UtcDateTime);
+            Interlocked.Increment(ref _generation);
         }
         finally
         {
@@ -113,13 +155,17 @@ public partial class ImportService(AppPaths paths, Scanner scanner, ILogger<Impo
         }
     }
 
-    /// <summary>The folder holding SentryClips and friends: the folder itself, or its TeslaCam folder.</summary>
+    /// <summary>
+    /// The folder holding SentryClips and friends: the folder itself, or its TeslaCam folder. A drive with only
+    /// encrypted clips counts too, so the app can explain why nothing can be imported from it.
+    /// </summary>
     public static string? FindClipRoot(string folder)
     {
         if (!Directory.Exists(folder)) return null;
+        bool HasClips(string dir) => ClipFolders.Append(EncryptedFolder).Any(f => Directory.Exists(Path.Combine(dir, f)));
         var nested = Path.Combine(folder, "TeslaCam");
-        if (Directory.Exists(nested) && ClipFolders.Any(f => Directory.Exists(Path.Combine(nested, f)))) return nested;
-        return ClipFolders.Any(f => Directory.Exists(Path.Combine(folder, f))) ? folder : null;
+        if (Directory.Exists(nested) && HasClips(nested)) return nested;
+        return HasClips(folder) ? folder : null;
     }
 
     private static List<(string Full, ImportFile File)> Enumerate(string clipRoot)
@@ -138,14 +184,21 @@ public partial class ImportService(AppPaths paths, Scanner scanner, ILogger<Impo
         return found;
     }
 
+    private static int CountEncrypted(string clipRoot)
+    {
+        var dir = Path.Combine(clipRoot, EncryptedFolder);
+        return Directory.Exists(dir) ? Directory.EnumerateFiles(dir, "*.mp4", SearchOption.AllDirectories).Count() : 0;
+    }
+
     /// <summary>What importing this folder would copy.</summary>
     public ImportPlan PlanFolder(string folder)
     {
+        EnsureNotLibrary(folder);
         var root = FindClipRoot(folder) ?? throw new InvalidOperationException("There are no TeslaCam clips in that folder.");
-        return Check(Enumerate(root).Select(f => f.File));
+        return Check(Enumerate(root).Select(f => f.File)) with { Encrypted = CountEncrypted(root) };
     }
 
-    /// <summary>Drives and mounted volumes with a TeslaCam folder on them, such as the car's USB drive.</summary>
+    /// <summary>Drives and mounted volumes with the car's clips on them, and how much on each is new.</summary>
     public List<ImportDrive> Drives()
     {
         var drives = new List<ImportDrive>();
@@ -157,9 +210,12 @@ public partial class ImportService(AppPaths paths, Scanner scanner, ILogger<Impo
                 var root = drive.RootDirectory.FullName;
                 // On Linux and macOS every mount is listed; removable media live under these.
                 if (!OperatingSystem.IsWindows() && !new[] { "/media/", "/run/media/", "/mnt/", "/Volumes/" }.Any(root.StartsWith)) continue;
-                if (FindClipRoot(root) == null) continue;
+                if (FindClipRoot(root) is not { } clipRoot) continue;
+                // The library itself may live on a drive that also has a TeslaCam folder; it is no source.
+                if (Overlaps(clipRoot, paths.Root)) continue;
+                var plan = CachedPlan(root, clipRoot, drive.AvailableFreeSpace);
                 var label = string.IsNullOrWhiteSpace(drive.VolumeLabel) ? root : $"{drive.VolumeLabel} ({root.TrimEnd('\\', '/')})";
-                drives.Add(new ImportDrive(root, label, drive.TotalSize));
+                drives.Add(new ImportDrive(root, label, drive.TotalSize, plan.Missing.Count, plan.MissingBytes, plan.Encrypted));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -169,16 +225,78 @@ public partial class ImportService(AppPaths paths, Scanner scanner, ILogger<Impo
         return drives;
     }
 
+    /// <summary>
+    /// Looking through a whole drive takes a moment, and the app asks every few seconds. The answer is kept until
+    /// the drive's free space changes (something was written or deleted), the library gains files, or half a minute passes.
+    /// </summary>
+    private ImportPlan CachedPlan(string root, string clipRoot, long freeBytes)
+    {
+        lock (_driveCache)
+        {
+            if (_driveCache.TryGetValue(root, out var cached) && cached.FreeBytes == freeBytes && cached.Generation == _generation
+                && DateTime.UtcNow - cached.At < DriveCacheTime)
+                return cached.Plan;
+        }
+        var plan = Check(Enumerate(clipRoot).Select(f => f.File)) with { Encrypted = CountEncrypted(clipRoot) };
+        lock (_driveCache) _driveCache[root] = (DateTime.UtcNow, freeBytes, _generation, plan);
+        return plan;
+    }
+
+    /// <summary>What is in a folder, for choosing it as the library.</summary>
+    public FolderInfo Inspect(string folder)
+    {
+        if (!Directory.Exists(folder)) return new FolderInfo(false, null, 0, 0, false, false);
+        var clipRoot = FindClipRoot(folder);
+        var events = 0;
+        if (clipRoot != null)
+        {
+            foreach (var name in new[] { "SentryClips", "SavedClips" })
+            {
+                var dir = Path.Combine(clipRoot, name);
+                if (Directory.Exists(dir)) events += Directory.EnumerateDirectories(dir).Count();
+            }
+            var recent = Path.Combine(clipRoot, "RecentClips");
+            if (Directory.Exists(recent) && Directory.EnumerateFiles(recent, "*.mp4", SearchOption.AllDirectories).Any()) events++;
+        }
+        return new FolderInfo(true, clipRoot, events, clipRoot != null ? CountEncrypted(clipRoot) : 0, IsRemovable(folder),
+            Path.GetFullPath(folder).TrimEnd('\\', '/').Equals(Path.GetFullPath(paths.Root).TrimEnd('\\', '/'),
+                OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Whether a folder is on a drive that comes and goes: removable media, or the car's own USB drive (which may
+    /// be an SSD that reports itself as fixed, so a TeslaCam folder at its root gives it away).
+    /// </summary>
+    private static bool IsRemovable(string folder)
+    {
+        try
+        {
+            var full = Path.GetFullPath(folder);
+            if (!OperatingSystem.IsWindows())
+                return new[] { "/media/", "/run/media/", "/Volumes/" }.Any(full.StartsWith);
+            var root = Path.GetPathRoot(full)!;
+            var drive = new DriveInfo(root);
+            if (drive.DriveType == DriveType.Removable) return true;
+            var system = Path.GetPathRoot(Environment.GetFolderPath(Environment.SpecialFolder.Windows));
+            return !root.Equals(system, StringComparison.OrdinalIgnoreCase) && Directory.Exists(Path.Combine(root, "TeslaCam"));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return false;
+        }
+    }
+
     /// <summary>Starts copying a folder or drive into the library in the background.</summary>
     public void StartFolderImport(string folder, bool deleteAfter)
     {
         lock (_lock)
         {
             if (State.Running) throw new InvalidOperationException("An import is already running.");
+            EnsureNotLibrary(folder);
+            EnsureLibraryAvailable();
             var root = FindClipRoot(folder) ?? throw new InvalidOperationException("There are no TeslaCam clips in that folder.");
             var files = Enumerate(root);
             var plan = Check(files.Select(f => f.File));
-            Directory.CreateDirectory(paths.ClipsBase);
             var free = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(paths.ClipsBase))!).AvailableFreeSpace;
             if (plan.MissingBytes > free)
                 throw new InvalidOperationException($"The library folder needs {plan.MissingBytes / 1_000_000_000.0:0.#} GB but has {free / 1_000_000_000.0:0.#} GB free.");
@@ -246,6 +364,12 @@ public partial class ImportService(AppPaths paths, Scanner scanner, ILogger<Impo
                 {
                     state.Failed++;
                     log.LogWarning("Could not import {File}: {Message}", file.Path, ex.Message);
+                    // Pulling the drive out makes every remaining file fail; stop and say why instead.
+                    if (!Directory.Exists(root))
+                    {
+                        state.Error = "The drive was unplugged before the import finished. What was copied is kept; plug it in again and import to finish.";
+                        return;
+                    }
                 }
                 finally
                 {
@@ -281,6 +405,7 @@ public partial class ImportService(AppPaths paths, Scanner scanner, ILogger<Impo
         }
         finally
         {
+            Interlocked.Increment(ref _generation);
             state.Running = false;
             state.FinishedUtc = DateTime.UtcNow;
             ScanSoon();
