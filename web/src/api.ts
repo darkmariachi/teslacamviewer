@@ -242,6 +242,8 @@ export interface AuthStatus {
   /** Running inside the desktop app: no password, and the library folder is on this computer. */
   desktop: boolean
   libraryFolder: string | null
+  /** False when the clip folder is missing: an unplugged drive, an unmounted share, a deleted folder. */
+  libraryAvailable: boolean
 }
 
 export interface ImportCheck {
@@ -272,15 +274,51 @@ export interface ImportDrive {
   path: string
   name: string
   totalBytes: number
+  /** Files on the drive the library doesn't have yet. */
+  newFiles: number
+  newBytes: number
+  /** Clips the car encrypted, which can't be imported. */
+  encrypted: number
+}
+
+/** What is in a folder someone is about to use as their library. */
+export interface FolderInfo {
+  exists: boolean
+  clipRoot: string | null
+  events: number
+  encrypted: number
+  /** On a drive that comes and goes, such as the car's USB drive. */
+  removable: boolean
+  isLibrary: boolean
+}
+
+export interface WindowState {
+  maximized: boolean
+  focused: boolean
+  fullScreen: boolean
 }
 
 /** What the desktop app adds to the page through its preload script. Absent in a normal browser. */
 export interface DesktopBridge {
   version: string
+  platform: string
   pickFolder: (title: string) => Promise<string | null>
-  changeLibraryFolder: () => Promise<boolean>
+  /** Switches the library to this folder; the app restarts its server and reloads. */
+  setLibraryFolder: (path: string) => Promise<boolean>
+  useDefaultLibraryFolder: () => Promise<boolean>
+  defaultLibraryFolder: () => Promise<string>
+  isFirstRun: () => Promise<boolean>
+  finishFirstRun: () => Promise<void>
   showFolder: (path: string) => Promise<void>
   checkForUpdates: () => Promise<string>
+  showAppMenu: (x: number, y: number) => Promise<void>
+  window: {
+    minimize: () => Promise<void>
+    toggleMaximize: () => Promise<void>
+    close: () => Promise<void>
+    state: () => Promise<WindowState>
+    onState: (callback: (state: WindowState) => void) => () => void
+  }
 }
 
 declare global {
@@ -432,7 +470,8 @@ export const api = {
   importCancel: () => request<void>('POST', '/api/import/cancel'),
   importDrives: () => request<ImportDrive[]>('GET', '/api/import/drives'),
   importPlan: (folder: string) =>
-    request<{ files: number; bytes: number; alreadyThere: number }>('POST', '/api/import/plan', { folder, deleteAfter: false }),
+    request<{ files: number; bytes: number; alreadyThere: number; encrypted: number }>('POST', '/api/import/plan', { folder, deleteAfter: false }),
+  importInspect: (folder: string) => request<FolderInfo>('POST', '/api/import/inspect', { folder }),
   importFolder: (folder: string, deleteAfter: boolean) => request<void>('POST', '/api/import/folder', { folder, deleteAfter }),
 
   archiver: () => request<Archiver>('GET', '/api/archiver'),

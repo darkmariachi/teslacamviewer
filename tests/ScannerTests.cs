@@ -165,6 +165,22 @@ public sealed class ScannerTests : IDisposable
     }
 
     [Fact]
+    public async Task Reads_a_TeslaCam_folder_dragged_into_the_library_without_listing_events_twice()
+    {
+        Clip("SentryClips/2026-10-01_10-00-30", "2026-10-01_10-00-00-front.mp4");
+        // The whole drive was dragged in: one event the library had already, one that is new.
+        Clip("TeslaCam/SentryClips/2026-10-01_10-00-30", "2026-10-01_10-00-00-front.mp4");
+        Clip("TeslaCam/SentryClips/2026-10-02_21-15-10", "2026-10-02_21-15-00-front.mp4");
+
+        var result = await Scanner.ScanAsync(CancellationToken.None);
+
+        Assert.Equal(2, result.Total);
+        await using var db = Db();
+        var paths = await db.Events.OrderBy(e => e.Name).Select(e => e.RelPath).ToListAsync();
+        Assert.Equal(["SentryClips/2026-10-01_10-00-30", "TeslaCam/SentryClips/2026-10-02_21-15-10"], paths);
+    }
+
+    [Fact]
     public async Task Splits_the_measurement_off_bump_reasons_and_drops_empty_gps_fixes()
     {
         const string dir = "SentryClips/2022-01-01_10-00-30";

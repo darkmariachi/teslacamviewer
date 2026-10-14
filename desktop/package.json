@@ -1,7 +1,7 @@
 {
   "name": "teslacam-viewer-desktop",
   "productName": "TeslaCam Viewer",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "TeslaCam Viewer as a desktop app: your Tesla's Sentry and dashcam clips, on your own computer",
   "private": true,
   "main": "./out/main.js",
