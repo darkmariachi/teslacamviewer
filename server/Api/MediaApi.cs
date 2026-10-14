@@ -33,6 +33,15 @@ public static class MediaApi
             return Results.File(path, "image/jpeg", lastModified: File.GetLastWriteTimeUtc(path));
         });
 
+        // The car's own short clip of the trigger, converted for browsers.
+        group.MapGet("/eventclip/{eventId:int}", (int eventId, AppPaths paths, HttpContext ctx) =>
+        {
+            var path = paths.EventClip(eventId);
+            if (!File.Exists(path)) return Results.NotFound();
+            ctx.Response.Headers.CacheControl = "private, max-age=86400";
+            return Results.File(path, "video/mp4", enableRangeProcessing: true, lastModified: File.GetLastWriteTimeUtc(path));
+        });
+
         group.MapGet("/preview/{eventId:int}", async (int eventId, bool? download, AppDb db, AppPaths paths) =>
         {
             var path = paths.Preview(eventId);

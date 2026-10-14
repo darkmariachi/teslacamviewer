@@ -30,6 +30,24 @@ public static class Cameras
     };
 
     /// <summary>
+    /// The recorded camera to show for <paramref name="camera"/>. Cars that save four cameras still name
+    /// a side camera they keep no file for; the other camera on that side saw the same thing.
+    /// </summary>
+    public static string? Nearest(string? camera, IReadOnlyCollection<string> recorded)
+    {
+        if (camera == null || recorded.Contains(camera)) return camera;
+        var sameSide = camera switch
+        {
+            "left_pillar" => "left_repeater",
+            "right_pillar" => "right_repeater",
+            "left_repeater" => "left_pillar",
+            "right_repeater" => "right_pillar",
+            _ => null,
+        };
+        return sameSide != null && recorded.Contains(sameSide) ? sameSide : null;
+    }
+
+    /// <summary>
     /// Cell order for the merged grid, row by row. Four cameras give a 2x2, six a 3x2 laid out
     /// the way the cameras sit on the car.
     /// </summary>
@@ -58,5 +76,18 @@ public static class Timeline
             acc += seg.DurationSec;
         }
         return Math.Max(0, acc - 1);
+    }
+
+    /// <summary>
+    /// The segments that lie wholly outside the window around the trigger, i.e. what trimming removes.
+    /// Empty when the event has no trigger time or the window misses the recording altogether.
+    /// </summary>
+    public static List<Segment> OutsideTrigger(Event ev, double beforeSec, double afterSec)
+    {
+        if (ev.TriggerTime is not { } trigger) return [];
+        var from = trigger.AddSeconds(-beforeSec);
+        var to = trigger.AddSeconds(afterSec);
+        var outside = ev.Segments.Where(s => s.StartTime.AddSeconds(s.DurationSec) <= from || s.StartTime >= to).ToList();
+        return outside.Count == ev.Segments.Count ? [] : outside;
     }
 }

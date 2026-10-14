@@ -49,6 +49,8 @@ public class Event
 
     public bool Probed { get; set; }
     public bool HasThumb { get; set; }
+    /// <summary>True once a browser-playable copy of the car's own event.mp4 (a few seconds around the trigger) is in the cache.</summary>
+    public bool HasEventClip { get; set; }
     public bool HasPreview { get; set; }
     /// <summary>Camera order used for the merged grid, comma separated.</summary>
     public string? PreviewLayout { get; set; }

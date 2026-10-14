@@ -80,18 +80,41 @@ public class TrashService(IDbContextFactory<AppDb> dbf, AppPaths paths, Settings
         var segment = ev.Segments.First(s => s.Id == segmentId);
         if (ev.Segments.Count <= 1) throw new InvalidOperationException("This is the only segment; delete the event instead");
 
+        MoveSegments(ev, [segment]);
+        await db.SaveChangesAsync();
+        scanner.RequestScan();
+    }
+
+    /// <summary>
+    /// Cuts an event down to the footage around its trigger: segments outside the window set in the settings
+    /// go to the trash folder and the event is reindexed. Returns how many segments were removed.
+    /// </summary>
+    public async Task<int> TrimAsync(int eventId)
+    {
+        await using var db = await dbf.CreateDbContextAsync();
+        var ev = await db.Events.Include(e => e.Segments).ThenInclude(s => s.Files).FirstAsync(e => e.Id == eventId);
+        if (ev.TrashedAt != null) return 0;
+        var outside = Timeline.OutsideTrigger(ev, settings.Current.TrimBeforeSec, settings.Current.TrimAfterSec);
+        if (outside.Count == 0) return 0;
+
+        MoveSegments(ev, outside);
+        await db.SaveChangesAsync();
+        scanner.RequestScan();
+        return outside.Count;
+    }
+
+    private void MoveSegments(Event ev, List<Segment> segments)
+    {
         var target = Path.Combine(paths.TrashDir, SegmentsDir, $"{ev.Name}_{DateTime.UtcNow:yyyyMMddHHmmss}");
         Directory.CreateDirectory(target);
         var source = paths.EventDir(ev);
-        foreach (var file in segment.Files)
+        foreach (var file in segments.SelectMany(s => s.Files))
         {
             var from = Path.Combine(source, file.FileName);
             if (File.Exists(from)) File.Move(from, Path.Combine(target, file.FileName));
         }
         // The folder contents changed, so its signature no longer matches and the scanner rebuilds the event.
         ev.Signature = "";
-        await db.SaveChangesAsync();
-        scanner.RequestScan();
     }
 
     /// <summary>Permanently removes a trashed event.</summary>

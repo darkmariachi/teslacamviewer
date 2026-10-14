@@ -10,13 +10,16 @@ a fast, phone-friendly library with a synced multi-camera player.
 ## What it does
 
 - **Library** – every event as a card with a thumbnail, reason, city and time. Filter by type, reason, city and
-  date, search, sort, and mark favorites.
+  date, search, sort, and mark favorites. Hovering a card plays the car's own short clip of the trigger, on
+  cars new enough to save one.
 - **Player** – one continuous timeline per event instead of one-minute files. All cameras play in sync; tap any
   camera to make it the main view. The moment that triggered the recording is marked, and playback starts just
   before it.
 - **Merged videos** – ffmpeg combines the cameras into a single grid video, which is lighter to play on a phone
   and easy to share. Created automatically for recent events and on request for older ones.
 - **Clip export** – select a range on the timeline and export it from one camera or as a grid.
+- **Trim** – newer cars save ten minutes of lead-up with every Sentry event. Trim cuts an event, or a whole
+  selection, down to the minutes around the trigger; how much to keep is set in the Admin panel.
 - **Map** – all located events on a clustered map (MapLibre with OpenFreeMap tiles, no API key).
 - **Collections and notes** – group events that belong together and write down what happened.
 - **Insights** – events per month, by hour and weekday, by reason and by place.

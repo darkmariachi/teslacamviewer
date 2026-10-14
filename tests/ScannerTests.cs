@@ -32,6 +32,7 @@ public sealed class ScannerTests : IDisposable
         services.AddSingleton<SettingsService>();
         services.AddSingleton<JobQueue>();
         services.AddSingleton<Scanner>();
+        services.AddSingleton<TrashService>();
         _services = services.BuildServiceProvider();
 
         using var db = _services.GetRequiredService<IDbContextFactory<AppDb>>().CreateDbContext();
@@ -94,6 +95,51 @@ public sealed class ScannerTests : IDisposable
         Assert.Equal("right_repeater", ev.TriggerCamera);
         // Thumbnail and probe are queued for every new event; old events get no automatic merge.
         Assert.Equal([JobKind.Probe, JobKind.Thumbnail], (await db.Jobs.Select(j => j.Kind).ToListAsync()).Order());
+    }
+
+    [Fact]
+    public async Task Shows_the_repeater_when_the_trigger_names_a_side_camera_the_car_did_not_save()
+    {
+        const string dir = "SentryClips/2026-10-13_15-36-30";
+        foreach (var camera in FourCameras) Clip(dir, $"2026-10-13_15-35-32-{camera}.mp4");
+        // Newer cars also write a short clip of the trigger; it is not one of the cameras.
+        Clip(dir, "event.mp4");
+        EventJson(dir, """{"timestamp":"2026-10-13T15:35:27","city":"Riverside","street":"","est_lat":"30.267","est_lon":"-97.7841","reason":"sentry_aware_object_detection","camera":"5"}""");
+
+        await Scanner.ScanAsync(CancellationToken.None);
+
+        await using var db = Db();
+        var ev = await db.Events.SingleAsync();
+        Assert.Equal("left_repeater", ev.TriggerCamera);
+        Assert.Equal("front,back,left_repeater,right_repeater", ev.Cameras);
+        Assert.Equal(1, ev.SegmentCount);
+    }
+
+    [Fact]
+    public async Task Trimming_moves_the_minutes_away_from_the_trigger_to_the_trash_and_reindexes()
+    {
+        const string dir = "SentryClips/2026-10-13_15-36-30";
+        foreach (var minute in Enumerable.Range(25, 11))
+            foreach (var camera in FourCameras)
+                Clip(dir, $"2026-10-13_15-{minute}-00-{camera}.mp4");
+        EventJson(dir, """{"timestamp":"2026-10-13T15:35:27","city":"Riverside","reason":"sentry_aware_object_detection","camera":"5"}""");
+        await Scanner.ScanAsync(CancellationToken.None);
+        int id;
+        await using (var db = Db()) id = (await db.Events.SingleAsync()).Id;
+
+        var removed = await _services.GetRequiredService<TrashService>().TrimAsync(id);
+        await Scanner.ScanAsync(CancellationToken.None);
+
+        Assert.Equal(8, removed);
+        await using var after = Db();
+        var ev = await after.Events.SingleAsync();
+        Assert.Equal(id, ev.Id);
+        Assert.Equal(3, ev.SegmentCount);
+        Assert.Equal(new DateTime(2026, 10, 13, 15, 33, 0), ev.StartTime);
+        var trashed = Directory.GetFiles(Path.Combine(Clips, ".trash"), "*.mp4", SearchOption.AllDirectories);
+        Assert.Equal(8 * 4, trashed.Length);
+        // A second trim has nothing left to remove.
+        Assert.Equal(0, await _services.GetRequiredService<TrashService>().TrimAsync(id));
     }
 
     [Fact]

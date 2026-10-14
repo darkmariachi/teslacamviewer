@@ -17,6 +17,10 @@ public record AppSettings
     public int WorkHoursEnd { get; init; } = 6;
     public int ScanIntervalMinutes { get; init; } = 5;
     public int TrashRetentionDays { get; init; } = 14;
+    /// <summary>Trimming an event keeps this many seconds of footage before the trigger…</summary>
+    public int TrimBeforeSec { get; init; } = 120;
+    /// <summary>…and this many after it.</summary>
+    public int TrimAfterSec { get; init; } = 60;
     /// <summary>0 lets ffmpeg decide.</summary>
     public int FfmpegThreads { get; init; }
     /// <summary>auto | software | vaapi</summary>
@@ -40,6 +44,8 @@ public record AppSettings
         WorkHoursEnd = Math.Clamp(WorkHoursEnd, 0, 23),
         ScanIntervalMinutes = Math.Clamp(ScanIntervalMinutes, 1, 1440),
         TrashRetentionDays = Math.Clamp(TrashRetentionDays, 0, 365),
+        TrimBeforeSec = Math.Clamp(TrimBeforeSec, 0, 3600),
+        TrimAfterSec = Math.Clamp(TrimAfterSec, 0, 3600),
         FfmpegThreads = Math.Clamp(FfmpegThreads, 0, 64),
         PreviewCellHeight = PreviewCellHeight is 240 or 360 or 480 or 720 ? PreviewCellHeight : 480,
         PreviewFps = Math.Clamp(PreviewFps, 10, 60),

@@ -26,7 +26,7 @@ public partial class Scanner(IDbContextFactory<AppDb> dbf, AppPaths paths, JobQu
     private static readonly TimeSpan RecentGap = TimeSpan.FromSeconds(100);
 
     // Raise this when event.json parsing changes so existing rows pick up the new fields without a full reindex.
-    private const int CurrentMetaVersion = 2;
+    private const int CurrentMetaVersion = 3;
 
     private readonly SemaphoreSlim _trigger = new(0);
     private readonly SemaphoreSlim _scanLock = new(1);
@@ -126,7 +126,11 @@ public partial class Scanner(IDbContextFactory<AppDb> dbf, AppPaths paths, JobQu
                         if (known.MetaVersion == CurrentMetaVersion) continue;
                         // Same files, older parsing: refresh the event.json fields only.
                         var stale = await db.Events.FirstAsync(e => e.Id == known.Id, ct);
+                        var shown = stale.TriggerCamera;
                         ReadMetadata(stale, pe.EventJsonPath);
+                        // The thumbnail job also converts the car's event.mp4; run it again when either is out of date.
+                        if (stale.TriggerCamera != shown || (!stale.HasEventClip && File.Exists(paths.CarEventClip(stale))))
+                            db.Jobs.Add(JobQueue.NewJob(stale, JobKind.Thumbnail));
                         pending++;
                         continue;
                     }
@@ -135,7 +139,7 @@ public partial class Scanner(IDbContextFactory<AppDb> dbf, AppPaths paths, JobQu
                     db.Segments.RemoveRange(ev.Segments);
                     ev.Segments.Clear();
                     Fill(ev, pe);
-                    ev.Probed = ev.HasThumb = ev.HasPreview = ev.NeedsTranscode = false;
+                    ev.Probed = ev.HasThumb = ev.HasEventClip = ev.HasPreview = ev.NeedsTranscode = false;
                     ev.PreviewLayout = null;
                     ev.PreviewDurationSec = null;
                     ev.PreviewSizeBytes = null;
@@ -324,7 +328,7 @@ public partial class Scanner(IDbContextFactory<AppDb> dbf, AppPaths paths, JobQu
                 if (match.Success && double.TryParse(match.Groups[2].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
                     ev.ReasonValue = value;
             }
-            ev.TriggerCamera = Cameras.FromEventJsonIndex(Get("camera"));
+            ev.TriggerCamera = Cameras.Nearest(Cameras.FromEventJsonIndex(Get("camera")), Cameras.Parse(ev.Cameras));
             if (double.TryParse(Get("est_lat"), NumberStyles.Float, CultureInfo.InvariantCulture, out var lat) &&
                 double.TryParse(Get("est_lon"), NumberStyles.Float, CultureInfo.InvariantCulture, out var lon) &&
                 // The car writes zeros (or denormal garbage) when it has no GPS fix.

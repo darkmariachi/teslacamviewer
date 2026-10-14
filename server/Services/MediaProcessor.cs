@@ -90,7 +90,37 @@ public class MediaProcessor(IDbContextFactory<AppDb> dbf, AppPaths paths, Ffmpeg
             if (File.Exists(output) && new FileInfo(output).Length > 0) break;
         }
         ev.HasThumb = File.Exists(output) && new FileInfo(output).Length > 0;
+        ev.HasEventClip = await EventClipAsync(ev, ct);
         await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Newer cars save a few seconds around the trigger as event.mp4, in MPEG-4 Part 2, which browsers
+    /// don't play. Keeps an H.264 copy for the library to show on hover.
+    /// </summary>
+    private async Task<bool> EventClipAsync(Event ev, CancellationToken ct)
+    {
+        var source = paths.CarEventClip(ev);
+        if (!File.Exists(source)) return false;
+        var output = paths.EventClip(ev.Id);
+        var temp = output + ".tmp.mp4";
+        try
+        {
+            // Small enough that the hardware encoder is not worth setting up.
+            await ffmpeg.RunAsync(
+            [
+                "-i", source, "-vf", "format=yuv420p", "-c:v", "libx264", "-preset", "veryfast", "-crf", "26",
+                "-an", "-movflags", "+faststart", temp,
+            ], null, ct);
+            File.Move(temp, output, true);
+            return true;
+        }
+        catch (FfmpegException)
+        {
+            // A clip that won't convert only costs the hover preview.
+            File.Delete(temp);
+            return false;
+        }
     }
 
     public async Task PreviewAsync(int eventId, Action<double> progress, CancellationToken ct)

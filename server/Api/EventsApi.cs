@@ -69,7 +69,7 @@ public static class EventsApi
             }));
         });
 
-        group.MapGet("/{id:int}", async (int id, AppDb db, JobQueue queue) =>
+        group.MapGet("/{id:int}", async (int id, AppDb db, JobQueue queue, SettingsService settings) =>
         {
             var ev = await db.Events.AsNoTracking()
                 .Include(e => e.Segments.OrderBy(s => s.Index)).ThenInclude(s => s.Files)
@@ -86,6 +86,8 @@ public static class EventsApi
                 .OrderBy(e => e.StartTime).Select(e => (int?)e.Id).FirstOrDefaultAsync();
             var older = await db.Events.Where(e => e.TrashedAt == null && e.StartTime < ev.StartTime)
                 .OrderByDescending(e => e.StartTime).Select(e => (int?)e.Id).FirstOrDefaultAsync();
+            var trimSettings = settings.Current;
+            var outside = Timeline.OutsideTrigger(ev, trimSettings.TrimBeforeSec, trimSettings.TrimAfterSec);
 
             return Results.Ok(new
             {
@@ -96,6 +98,16 @@ public static class EventsApi
                 ev.Probed,
                 preview = ev.HasPreview
                     ? new { url = $"/api/media/preview/{ev.Id}", layout = ev.PreviewLayout, durationSec = ev.PreviewDurationSec, sizeBytes = ev.PreviewSizeBytes }
+                    : null,
+                // What trimming to the trigger would remove; null when there is nothing to trim.
+                trim = outside.Count > 0
+                    ? new
+                    {
+                        segments = outside.Count,
+                        bytes = outside.Sum(x => x.Files.Sum(f => f.SizeBytes)),
+                        beforeSec = trimSettings.TrimBeforeSec,
+                        afterSec = trimSettings.TrimAfterSec,
+                    }
                     : null,
                 segments = ev.Segments.Select(s => new
                 {
@@ -142,6 +154,8 @@ public static class EventsApi
         group.MapDelete("/{id:int}/segments/{segmentId:int}", (int id, int segmentId, TrashService trash) =>
             Guard(() => trash.TrashSegmentAsync(id, segmentId)));
 
+        group.MapPost("/{id:int}/trim", (int id, TrashService trash) => Guard(() => trash.TrimAsync(id)));
+
         // Ask for a merged preview, a compatibility transcode, or fresh metadata right now.
         group.MapPost("/{id:int}/process", async (int id, ProcessRequest req, JobQueue queue, AppDb db) =>
         {
@@ -185,6 +199,11 @@ public static class EventsApi
                 case "preview":
                     foreach (var id in ids) await queue.RequestAsync(id, JobKind.Preview);
                     break;
+                case "trim":
+                    return await Guard(async () =>
+                    {
+                        foreach (var id in ids) await trash.TrimAsync(id);
+                    });
                 case "trash":
                     return await Guard(async () =>
                     {

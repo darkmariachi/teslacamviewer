@@ -23,6 +23,8 @@ export interface EventSummary {
   favorite: boolean
   hasNotes: boolean
   hasThumb: boolean
+  /** The car's own short clip of the trigger is available for a hover preview. */
+  hasEventClip: boolean
   hasPreview: boolean
   needsTranscode: boolean
   trashedAt: string | null
@@ -73,6 +75,8 @@ export interface EventDetail {
   triggerOffsetSec: number | null
   probed: boolean
   preview: { url: string; layout: string; durationSec: number; sizeBytes: number } | null
+  /** What trimming to the trigger would remove; null when there is nothing to trim. */
+  trim: { segments: number; bytes: number; beforeSec: number; afterSec: number } | null
   segments: Segment[]
   collections: { id: number; name: string }[]
   jobs: Job[]
@@ -129,6 +133,8 @@ export interface Settings {
   workHoursEnd: number
   scanIntervalMinutes: number
   trashRetentionDays: number
+  trimBeforeSec: number
+  trimAfterSec: number
   ffmpegThreads: number
   encoder: 'auto' | 'software' | 'vaapi'
   previewCellHeight: number
@@ -310,10 +316,11 @@ export const api = {
   trashEvent: (id: number) => request<void>('DELETE', `/api/events/${id}`),
   restoreEvent: (id: number) => request<void>('POST', `/api/events/${id}/restore`),
   trashSegment: (id: number, segmentId: number) => request<void>('DELETE', `/api/events/${id}/segments/${segmentId}`),
+  trimEvent: (id: number) => request<void>('POST', `/api/events/${id}/trim`),
   process: (id: number, kind: JobKind) => request<Job>('POST', `/api/events/${id}/process`, { kind }),
   exportClip: (id: number, camera: string, start: number, end: number) =>
     request<Job>('POST', `/api/events/${id}/export`, { camera, start, end }),
-  bulk: (ids: number[], action: 'favorite' | 'unfavorite' | 'collect' | 'preview' | 'trash', collectionId?: number) =>
+  bulk: (ids: number[], action: 'favorite' | 'unfavorite' | 'collect' | 'preview' | 'trim' | 'trash', collectionId?: number) =>
     request<void>('POST', '/api/events/bulk', { ids, action, collectionId }),
 
   collections: () => request<Collection[]>('GET', '/api/collections'),
@@ -355,3 +362,4 @@ export const api = {
 }
 
 export const thumbUrl = (eventId: number) => `/api/media/thumb/${eventId}`
+export const eventClipUrl = (eventId: number) => `/api/media/eventclip/${eventId}`

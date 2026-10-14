@@ -28,6 +28,7 @@ public static class Dto
         e.Favorite,
         hasNotes = !string.IsNullOrEmpty(e.Notes),
         e.HasThumb,
+        e.HasEventClip,
         e.HasPreview,
         e.NeedsTranscode,
         trashedAt = Utc(e.TrashedAt),

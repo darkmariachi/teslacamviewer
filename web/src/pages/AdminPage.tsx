@@ -528,6 +528,12 @@ function SettingsForm() {
         <Field label="Keep deleted events in the trash for" hint="After this they are removed from disk for good. 0 removes them at the next cleanup.">
           <NumberInput value={draft.trashRetentionDays} min={0} max={365} suffix="days" onChange={(v) => set({ trashRetentionDays: v })} />
         </Field>
+        <Field label="Trimming keeps before the trigger" hint="Trim cuts a long event down to the footage around its trigger. Recordings are a minute long, so whole minutes are kept.">
+          <NumberInput value={draft.trimBeforeSec} min={0} max={3600} suffix="seconds" onChange={(v) => set({ trimBeforeSec: v })} />
+        </Field>
+        <Field label="…and after the trigger">
+          <NumberInput value={draft.trimAfterSec} min={0} max={3600} suffix="seconds" onChange={(v) => set({ trimAfterSec: v })} />
+        </Field>
       </Section>
 
       <Section title="Notifications" description="Get a call when the car records a new Sentry event, for example into a Home Assistant webhook.">

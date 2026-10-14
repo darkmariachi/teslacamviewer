@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useInfiniteQuery, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query'
-import { CheckSquare, FolderPlus, LayoutGrid, Search, SlidersHorizontal, Star, Trash2, VideoOff, X } from 'lucide-react'
+import { CheckSquare, FolderPlus, LayoutGrid, Scissors, Search, SlidersHorizontal, Star, Trash2, VideoOff, X } from 'lucide-react'
 import { api, type EventFilters, type EventSummary, type EventType, type Page } from '../api'
 import { cx, dayKey, formatDay, reasonLabel } from '../lib/format'
 import { Button, ConfirmDialog, EmptyState, Segmented, inputClass } from './ui'
@@ -55,7 +55,7 @@ export function EventBrowser({ fixed, empty, extraBulk }: Props) {
   const [search, setSearch] = useState(filters.q ?? '')
   const [selecting, setSelecting] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
-  const [dialog, setDialog] = useState<'collect' | 'trash' | null>(null)
+  const [dialog, setDialog] = useState<'collect' | 'trim' | 'trash' | null>(null)
 
   const facets = useQuery({ queryKey: ['facets'], queryFn: api.facets })
   const list = useInfiniteQuery({
@@ -301,6 +301,9 @@ export function EventBrowser({ fixed, empty, extraBulk }: Props) {
             <Button size="sm" disabled={!ids.length} icon={<LayoutGrid className="size-4" />} onClick={async () => { await api.bulk(ids, 'preview'); stopSelecting() }}>
               Merge
             </Button>
+            <Button size="sm" disabled={!ids.length} icon={<Scissors className="size-4" />} onClick={() => setDialog('trim')}>
+              Trim
+            </Button>
             {extraBulk?.(ids, () => { refresh(); stopSelecting() })}
             <Button size="sm" variant="danger" disabled={!ids.length} icon={<Trash2 className="size-4" />} onClick={() => setDialog('trash')}>
               Delete
@@ -317,6 +320,22 @@ export function EventBrowser({ fixed, empty, extraBulk }: Props) {
             refresh()
             stopSelecting()
           }}
+        />
+      )}
+      {dialog === 'trim' && (
+        <ConfirmDialog
+          title={`Trim ${ids.length} ${ids.length === 1 ? 'event' : 'events'} to the trigger?`}
+          message="Each event keeps the footage around its trigger, as set in Admin → Settings. The rest moves to the trash folder. Events without a trigger moment, such as drives, are left as they are."
+          confirmLabel="Trim events"
+          danger
+          onConfirm={async () => {
+            await api.bulk(ids, 'trim')
+            // The events are reindexed in the background; give it a moment before reloading.
+            await new Promise((r) => setTimeout(r, 1500))
+            refresh()
+            stopSelecting()
+          }}
+          onClose={() => setDialog(null)}
         />
       )}
       {dialog === 'trash' && (

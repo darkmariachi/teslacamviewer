@@ -175,6 +175,9 @@ namespace TeslaCam.Data.Migrations
                     b.Property<bool>("Favorite")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("HasEventClip")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("HasPreview")
                         .HasColumnType("INTEGER");
 

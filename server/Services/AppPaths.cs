@@ -48,9 +48,12 @@ public class AppPaths
 
     public string EventDir(Event e) => Path.Combine(ClipsBase, e.TrashPath ?? e.RelPath);
     public string ClipPath(Event e, ClipFile f) => Path.Combine(EventDir(e), f.FileName);
+    /// <summary>The short clip of the trigger that newer cars write next to the camera files.</summary>
+    public string CarEventClip(Event e) => Path.Combine(EventDir(e), "event.mp4");
 
     public string EventCache(int eventId) => Path.Combine(Cache, "events", eventId.ToString());
     public string Thumb(int eventId) => Path.Combine(EventCache(eventId), "thumb.jpg");
+    public string EventClip(int eventId) => Path.Combine(EventCache(eventId), "event.mp4");
     public string Preview(int eventId) => Path.Combine(EventCache(eventId), "preview.mp4");
     public string Transcoded(int eventId, int fileId) => Path.Combine(EventCache(eventId), $"t_{fileId}.mp4");
     public string Export(int jobId) => Path.Combine(ExportsDir, $"{jobId}.mp4");

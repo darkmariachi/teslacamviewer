@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Check, LayoutGrid, MapPin, Star, StickyNote, Video } from 'lucide-react'
-import { thumbUrl, type EventSummary } from '../api'
+import { eventClipUrl, thumbUrl, type EventSummary } from '../api'
 import { cx, eventTitle, formatClock, formatTime, TYPE_LABEL } from '../lib/format'
 
 interface Props {
@@ -14,11 +14,17 @@ interface Props {
 
 export function EventCard({ event, selecting, selected, onToggleSelect, onToggleFavorite }: Props) {
   const [broken, setBroken] = useState(false)
+  const [hovering, setHovering] = useState(false)
   const when = event.triggerTime ?? event.startTime
 
   const body = (
     <>
-      <div className="relative aspect-4/3 overflow-hidden rounded-xl bg-raised">
+      <div
+        className="relative aspect-4/3 overflow-hidden rounded-xl bg-raised"
+        // Touch has no hover; a tap there should just open the event.
+        onPointerEnter={(e) => e.pointerType === 'mouse' && setHovering(true)}
+        onPointerLeave={() => setHovering(false)}
+      >
         {event.hasThumb && !broken ? (
           <img
             src={thumbUrl(event.id)}
@@ -31,6 +37,9 @@ export function EventCard({ event, selecting, selected, onToggleSelect, onToggle
           <div className="flex size-full items-center justify-center text-line-strong">
             <Video className="size-10" />
           </div>
+        )}
+        {hovering && event.hasEventClip && (
+          <video src={eventClipUrl(event.id)} autoPlay muted loop playsInline className="absolute inset-0 size-full object-cover" />
         )}
         <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/70 via-transparent to-black/30" />
 

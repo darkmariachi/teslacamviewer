@@ -22,7 +22,7 @@ export default function EventPage() {
   const queryClient = useQueryClient()
   const [range, setRange] = useState<[number, number] | null>(null)
   const [exportCamera, setExportCamera] = useState('grid')
-  const [dialog, setDialog] = useState<'collect' | 'trash' | { segment: number } | null>(null)
+  const [dialog, setDialog] = useState<'collect' | 'trim' | 'trash' | { segment: number } | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
   const query = useQuery({
@@ -245,6 +245,11 @@ export default function EventPage() {
                       <MenuItem icon={<RefreshCw className="size-4" />} onClick={() => { close(); run(() => api.process(id, 'thumbnail')) }}>
                         Refresh thumbnail
                       </MenuItem>
+                      {detail.trim && (
+                        <MenuItem icon={<Scissors className="size-4" />} onClick={() => { close(); setDialog('trim') }}>
+                          Trim to the trigger
+                        </MenuItem>
+                      )}
                       <MenuItem icon={<Trash2 className="size-4" />} danger onClick={() => { close(); setDialog('trash') }}>
                         Delete event
                       </MenuItem>
@@ -375,6 +380,22 @@ export default function EventPage() {
             queryClient.invalidateQueries({ queryKey: ['events'] })
             queryClient.invalidateQueries({ queryKey: ['facets'] })
             navigate(detail.olderId ? `/events/${detail.olderId}` : '/', { replace: true })
+          }}
+          onClose={() => setDialog(null)}
+        />
+      )}
+      {dialog === 'trim' && detail.trim && (
+        <ConfirmDialog
+          title="Trim this event to the trigger?"
+          message={`Keeps the footage from ${formatDuration(detail.trim.beforeSec)} before the trigger to ${formatDuration(detail.trim.afterSec)} after it. The other ${detail.trim.segments} of ${detail.segments.length} segments (${formatBytes(detail.trim.bytes)}) move to the trash folder, and the merged video is rebuilt.`}
+          confirmLabel="Trim event"
+          danger
+          onConfirm={async () => {
+            await api.trimEvent(id)
+            // The event is reindexed in the background; give it a moment before reloading.
+            await new Promise((r) => setTimeout(r, 1500))
+            await refresh()
+            queryClient.invalidateQueries({ queryKey: ['events'] })
           }}
           onClose={() => setDialog(null)}
         />
