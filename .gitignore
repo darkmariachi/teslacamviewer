@@ -17,3 +17,6 @@ server/wwwroot/
 .idea/
 *.log
 .env
+
+# Local notes for Claude Code
+CLAUDE.md
