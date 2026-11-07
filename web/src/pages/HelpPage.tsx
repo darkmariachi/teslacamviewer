@@ -218,9 +218,10 @@ export default function HelpPage() {
               </li>
             </ol>
             <p>
-              Whenever the car is home, the app collects the new readings from the Pi, and the top of the Car tab shows the
-              battery, charging, locks, open doors and windows, tire pressures with any low-pressure warnings, and the battery over
-              the last two weeks. The Pi deletes readings once the app has them. It is experimental: we are still checking how it
+              Whenever the car is home, the app collects the new readings from the Pi, and a Car page appears in the menu: a
+              drawing of the car with each tire's pressure (low ones marked), open doors, windows, trunk and frunk, the lock and
+              Sentry, then the battery and charging, cabin temperature, odometer, software updates and the battery over the last
+              two weeks. The Pi deletes readings once the app has them. It is experimental: we are still checking how it
               affects the car's battery while parked.
             </p>
           </Section>

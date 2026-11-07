@@ -538,6 +538,9 @@ export const api = {
   carSync: () => request<{ added: number }>('POST', '/api/car/sync'),
 }
 
+/** The car's state from car-logger; shared so the sidebar and the Car page use one cache entry. */
+export const carQuery = { queryKey: ['car'], queryFn: () => api.car(), refetchInterval: 30_000 } as const
+
 export const thumbUrl = (eventId: number) => `/api/media/thumb/${eventId}`
 export const eventClipUrl = (eventId: number) => `/api/media/eventclip/${eventId}`
 

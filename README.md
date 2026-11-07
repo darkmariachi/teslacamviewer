@@ -301,8 +301,9 @@ without a login. "Upload now" asks teslausb to start archiving immediately.
 [car-logger](car-logger/README.md) is an optional program for the same Pi. With a key paired to the car over
 Bluetooth, it logs battery, charging, location while driving, locks and doors, climate and tire pressure, with
 no cloud service or Tesla account. Paste the token it creates into **Admin → Car**, and whenever the car is
-home the app collects the readings and shows the battery, charging, locks, open doors and windows, tire pressures
-and two weeks of battery level at the top of the Car tab. Drives and charging sessions come next.
+home the app collects the readings, and a **Car** page appears in the menu: a drawing of the car with each tire's
+pressure and anything open, the lock and Sentry, the battery and charging, cabin temperature and two weeks of
+battery level. Drives and charging sessions come next.
 
 ## Sentry at home
 
