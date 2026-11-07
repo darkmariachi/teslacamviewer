@@ -73,8 +73,9 @@ func DefaultSchedule(idleEvery time.Duration) Schedule {
 		ModeParked: {KindBody: 30 * time.Second, KindDrive: 30 * time.Second, KindLocation: 10 * m, KindCharge: 2 * m,
 			KindClimate: 5 * m, KindClosures: 2 * m, KindTires: 30 * m, KindSoftware: 6 * h},
 		// Body checks never wake the car; everything else waits long enough that it can doze off.
+		// Tires and software ride along too, or a car that's only ever parked would never report them.
 		ModeIdle: {KindBody: m, KindDrive: idleEvery, KindLocation: idleEvery, KindCharge: idleEvery,
-			KindClimate: idleEvery, KindClosures: idleEvery},
+			KindClimate: idleEvery, KindClosures: idleEvery, KindTires: idleEvery, KindSoftware: 6 * h},
 		ModeAsleep: {KindBody: 2 * m},
 	}
 }
