@@ -32,6 +32,15 @@ public static class ArchiverApi
             var running = syncs.FirstOrDefault(s => s.FinishedAt == null && s.StartedAt > DateTime.UtcNow.AddHours(-12));
             var live = db.Events.AsNoTracking().Where(e => e.TrashedAt == null);
 
+            // Two weeks of readings is enough to see a trend without sending thousands of points.
+            var since = DateTime.UtcNow.AddDays(-14);
+            var samples = await db.ArchiverSamples.AsNoTracking().Where(s => s.At >= since).OrderBy(s => s.At).ToListAsync();
+            var visits = samples.GroupBy(s => s.SessionId)
+                .Select(g => new ArchiverLogParser.VisitPower(g.Key, g.Any(s => ((s.Throttled ?? 0) & 0x10000) != 0)))
+                .ToList();
+            var logJson = sessions.FirstOrDefault(s => s.LastLogJson != null)?.LastLogJson;
+            var archiveLog = logJson != null ? JsonSerializer.Deserialize<ArchiverLog>(logJson, JsonSerializerOptions.Web) : null;
+
             return Results.Ok(new
             {
                 enabled,
@@ -56,6 +65,18 @@ public static class ArchiverApi
                 // Car-local time of the newest footage, and when the library last gained an event.
                 newestClip = await live.MaxAsync(e => (DateTime?)e.EndTime),
                 lastIndexed = Dto.Utc(await live.MaxAsync(e => (DateTime?)e.IndexedAt)),
+                // Times inside the log are the Pi's own clock, with no zone, like clip times.
+                log = archiveLog,
+                warnings = ArchiverLogParser.Warnings(archiveLog, online, latest?.StartedAt, visits, DateTime.UtcNow),
+                history = samples.Select(s => new
+                {
+                    at = Dto.Utc(s.At),
+                    s.SessionId,
+                    s.CpuTempC,
+                    s.SupplyVolts,
+                    s.WifiStrength,
+                    s.Throttled,
+                }),
             });
         });
 

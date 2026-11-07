@@ -33,7 +33,8 @@ public record ArchiverNotification(bool IsStart, int? Files, int? Events);
 
 /// <summary>
 /// Follows the teslausb device in the car: polls its status page to know when it is on the home
-/// network, and records the upload runs it announces through its webhook.
+/// network, keeps health readings and the gist of its archive log, and records the upload runs it
+/// announces through its webhook.
 /// </summary>
 public partial class ArchiverService(IDbContextFactory<AppDb> dbf, SettingsService settings, Scanner scanner,
     IHttpClientFactory http, ILogger<ArchiverService> log) : BackgroundService
@@ -106,6 +107,7 @@ public partial class ArchiverService(IDbContextFactory<AppDb> dbf, SettingsServi
     {
         var url = settings.Current.TeslausbEnabled == true ? settings.Current.ArchiverUrl : null;
         ArchiverStatus? status = null;
+        ArchiverLog? archiveLog = null;
         if (url != null)
         {
             try
@@ -121,12 +123,49 @@ public partial class ArchiverService(IDbContextFactory<AppDb> dbf, SettingsServi
                 // Being unreachable is the normal state while the car is away.
                 LastError = ex is FormatException ? ex.Message : null;
             }
+            // The log changes far less often than the status, except when the drive is handed back and forth.
+            if (status != null && (DateTime.UtcNow - _lastLogRead > LogInterval || status.DrivesActive != _lastDrivesActive))
+            {
+                archiveLog = await ReadLogAsync(url, ct);
+                _lastLogRead = DateTime.UtcNow;
+                _lastDrivesActive = status.DrivesActive;
+            }
         }
-        await RecordAsync(status, ct);
+        await RecordAsync(status, archiveLog, ct);
     }
 
-    /// <summary>Opens, extends or closes the current "at home" session.</summary>
-    private async Task RecordAsync(ArchiverStatus? status, CancellationToken ct)
+    private static readonly TimeSpan LogInterval = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan SampleInterval = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan KeepSamples = TimeSpan.FromDays(90);
+    // Enough of the log to cover a run that copied a few hundred files, without pulling the whole file over car Wi-Fi.
+    private const int LogTailBytes = 128 * 1024;
+    private DateTime _lastLogRead = DateTime.MinValue;
+    private bool? _lastDrivesActive;
+
+    /// <summary>Reads the end of teslausb's archiveloop.log, which its web server publishes. Older setups may not have it.</summary>
+    private async Task<ArchiverLog?> ReadLogAsync(string url, CancellationToken ct)
+    {
+        try
+        {
+            using var client = http.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(10);
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{url}/archiveloop.log");
+            request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(null, LogTailBytes);
+            using var response = await client.SendAsync(request, ct);
+            if (!response.IsSuccessStatusCode) return null;
+            var text = System.Text.Encoding.UTF8.GetString(await response.Content.ReadAsByteArrayAsync(ct));
+            // A partial read starts mid-line; drop that fragment.
+            if (response.StatusCode == System.Net.HttpStatusCode.PartialContent && text.IndexOf('\n') is var nl and >= 0) text = text[(nl + 1)..];
+            return ArchiverLogParser.Parse(text);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Opens, extends or closes the current "at home" session, and keeps a reading every few minutes.</summary>
+    private async Task RecordAsync(ArchiverStatus? status, ArchiverLog? archiveLog, CancellationToken ct)
     {
         await using var db = await dbf.CreateDbContextAsync(ct);
         var now = DateTime.UtcNow;
@@ -143,11 +182,43 @@ public partial class ArchiverService(IDbContextFactory<AppDb> dbf, SettingsServi
                 open = new ArchiverSession { StartedAt = now, Open = true };
                 db.ArchiverSessions.Add(open);
                 log.LogInformation("The car's archiver is on the network");
+                await db.ArchiverSamples.Where(s => s.At < now - KeepSamples).ExecuteDeleteAsync(ct);
             }
             open.LastSeenAt = now;
             open.LastStatusJson = JsonSerializer.Serialize(status, Json);
+            if (archiveLog != null)
+            {
+                // Compare with the last log read, even if that was on an earlier visit.
+                var previousJson = open.LastLogJson ?? await db.ArchiverSessions.Where(s => s.LastLogJson != null)
+                    .OrderByDescending(s => s.Id).Select(s => s.LastLogJson).FirstOrDefaultAsync(ct);
+                var previous = previousJson is { } json ? JsonSerializer.Deserialize<ArchiverLog>(json, Json) : null;
+                open.LastLogJson = JsonSerializer.Serialize(archiveLog, Json);
+                // Without the webhook, a finished copy in the log is the only sign that new clips have landed.
+                if (previous != null && archiveLog.LastCopy is { FinishedAt: not null, Archived: > 0 } copy
+                    && copy.StartedAt != previous.LastCopy?.StartedAt)
+                    _ = Task.Delay(TimeSpan.FromSeconds(100)).ContinueWith(_ => scanner.RequestScan(), TaskScheduler.Default);
+            }
         }
         await db.SaveChangesAsync(ct);
+
+        if (status != null && open != null)
+        {
+            var last = await db.ArchiverSamples.Where(s => s.SessionId == open.Id).MaxAsync(s => (DateTime?)s.At, ct);
+            if (last == null || now - last >= SampleInterval)
+            {
+                db.ArchiverSamples.Add(new ArchiverSample
+                {
+                    SessionId = open.Id,
+                    At = now,
+                    CpuTempC = status.CpuTempC,
+                    SupplyVolts = status.SupplyVolts,
+                    WifiStrength = status.WifiStrength,
+                    Throttled = status.Throttled,
+                    FreeBytes = status.FreeBytes,
+                });
+                await db.SaveChangesAsync(ct);
+            }
+        }
     }
 
     /// <summary>Handles a teslausb webhook call ({"value1": title, "value2": message}).</summary>

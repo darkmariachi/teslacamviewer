@@ -13,7 +13,8 @@ contact its authors or any service they run. Your clips stay on your own compute
   and that a copy of the app asked. Turn it off under Help → "Check for updates automatically"; after that it
   only happens when you choose "Check for updates".
 - **Your teslausb device, only if you turn on teslausb** and enter its address. The app asks it for its status
-  every 30 seconds, on your own network.
+  every 30 seconds and reads the end of its archive log every couple of minutes, on your own network. It keeps
+  health readings (temperature, supply voltage, Wi-Fi strength) for 90 days in its own database.
 - **A webhook address, only if you enter one.** Each new Sentry event's time, place, reason and coordinates are
   sent there.
 
