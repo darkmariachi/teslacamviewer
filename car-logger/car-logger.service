@@ -1,0 +1,16 @@
+[Unit]
+Description=TeslaCam car logger (reads the car's state over Bluetooth)
+# The program, key and log all live on teslausb's writable partition.
+RequiresMountsFor=/mutable
+After=local-fs.target
+
+[Service]
+ExecStart=/mutable/tesla/car-logger
+Restart=always
+RestartSec=10
+# Archiving is teslausb's job; stay out of its way.
+Nice=10
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=multi-user.target

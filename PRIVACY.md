@@ -30,6 +30,9 @@ contact its authors or any service they run. Your clips stay on your own compute
   requests from its own window on this computer.
 - **The desktop app's logs**, in `logs` next to the data folder. They contain file names and errors, never the
   footage itself.
+- **car-logger's log, only if you install it on the teslausb Pi.** It records the car's state, including where
+  it drives, on the Pi in `/mutable/car-log`. It talks to the car over Bluetooth and sends nothing over the
+  internet. See [car-logger/README.md](car-logger/README.md).
 
 ## What is in the footage
 

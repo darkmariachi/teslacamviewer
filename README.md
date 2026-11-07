@@ -99,6 +99,7 @@ been run on Windows 11. Here is what has and has not been tried.
 | Six-camera cars (pillar cameras)                            | Built; tried with generated clips only         |
 | HEVC clips                                                  | Built; not yet tried with real HEVC footage    |
 | macOS                                                       | Not yet: needs Apple code signing              |
+| car-logger (car state over Bluetooth, on the teslausb Pi)   | Experimental; logging only, not yet in the app |
 
 If you try one of the rows that is not marked "Works", an issue saying how it went is very welcome.
 
@@ -288,6 +289,13 @@ drive, and copies new clips to a shared folder whenever the car is on your home 
 
 The token in the webhook address is the only credential the car needs; the endpoint accepts nothing else
 without a login. "Upload now" asks teslausb to start archiving immediately.
+
+### Car state (experimental)
+
+[car-logger](car-logger/README.md) is an optional program for the same Pi. With a key paired to the car over
+Bluetooth, it logs battery, charging, location while driving, locks and doors, climate and tire pressure, with
+no cloud service or Tesla account. For now it only writes the log on the Pi; collecting it into a car
+dashboard in TeslaCam comes next.
 
 ## Sentry at home
 

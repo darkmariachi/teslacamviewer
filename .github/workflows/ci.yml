@@ -52,3 +52,20 @@ jobs:
           cache-dependency-path: desktop/package-lock.json
       - run: npm ci
       - run: npm run typecheck
+
+  car-logger:
+    name: Car logger
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: car-logger
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: car-logger/go.mod
+          cache-dependency-path: car-logger/go.sum
+      - run: go vet ./...
+      - run: go test ./...
+      # The Pi is arm64; make sure it still builds for it.
+      - run: GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o /dev/null .
