@@ -184,7 +184,10 @@ export default function HelpPage() {
               <li>Turn on Admin → Settings → teslausb. A Car tab appears in Admin.</li>
               <li>
                 In Admin → Car, enter teslausb's address (usually <Code>http://teslausb.local</Code>). The app then shows whether
-                the car is home, its Wi-Fi, temperature, power and storage.
+                the car is home, its Wi-Fi, temperature, power and storage. It also reads teslausb's own log to show its latest
+                check and the last time it copied clips. It keeps two weeks of temperature, power and Wi-Fi readings as trends,
+                and warns about problems: the car is home but teslausb can't reach the shared folder, an upload stopped partway,
+                or the power keeps dipping.
               </li>
               <li>
                 Copy the two webhook lines shown there into teslausb's <Code>teslausb_setup_variables.conf</Code> and run its setup

@@ -148,6 +148,21 @@ public class ArchiverSession
     public bool Open { get; set; }
     /// <summary>The most recent status report received during this session, as JSON.</summary>
     public string? LastStatusJson { get; set; }
+    /// <summary>What teslausb's own log said most recently during this session (an ArchiverLog), as JSON.</summary>
+    public string? LastLogJson { get; set; }
+}
+
+/// <summary>A reading of the archiver's health, kept every few minutes while it is home so trends show up.</summary>
+public class ArchiverSample
+{
+    public int Id { get; set; }
+    public int SessionId { get; set; }
+    public DateTime At { get; set; }
+    public double? CpuTempC { get; set; }
+    public double? SupplyVolts { get; set; }
+    public double? WifiStrength { get; set; }
+    public int? Throttled { get; set; }
+    public long? FreeBytes { get; set; }
 }
 
 /// <summary>One upload run reported by the archiver's start and finish notifications.</summary>

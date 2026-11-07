@@ -17,11 +17,48 @@ namespace TeslaCam.Data.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
 
+            modelBuilder.Entity("TeslaCam.Data.ArchiverSample", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("At")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("CpuTempC")
+                        .HasColumnType("REAL");
+
+                    b.Property<long?>("FreeBytes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SessionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double?>("SupplyVolts")
+                        .HasColumnType("REAL");
+
+                    b.Property<int?>("Throttled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double?>("WifiStrength")
+                        .HasColumnType("REAL");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("At");
+
+                    b.ToTable("ArchiverSamples");
+                });
+
             modelBuilder.Entity("TeslaCam.Data.ArchiverSession", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastLogJson")
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("LastSeenAt")
                         .HasColumnType("TEXT");

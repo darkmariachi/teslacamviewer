@@ -179,8 +179,39 @@ export interface ArchiverSync {
   filesArchived: number | null
 }
 
+/** One pass of teslausb's archive loop, read from its log. Times are the Pi's own clock, with no zone. */
+export interface ArchiverRun {
+  startedAt: string | null
+  finishedAt: string | null
+  eventFolders: number | null
+  files: number | null
+  archived: number | null
+  outcome: 'running' | 'nothing' | 'done' | 'error' | 'noArchive'
+  problems: string[]
+}
+
+export interface ArchiverLog {
+  state: 'starting' | 'waitingForArchive' | 'reachable' | 'archiving' | 'done' | null
+  stateSince: string | null
+  lastRun: ArchiverRun | null
+  lastCopy: ArchiverRun | null
+  waitProblems: string[]
+}
+
+export interface ArchiverSample {
+  at: string
+  sessionId: number
+  cpuTempC: number | null
+  supplyVolts: number | null
+  wifiStrength: number | null
+  throttled: number | null
+}
+
 /** The teslausb device in the car, as seen from the home network. */
 export interface Archiver {
+  log: ArchiverLog | null
+  warnings: { level: 'warn' | 'error'; text: string; detail: string | null }[]
+  history: ArchiverSample[]
   enabled: boolean
   configured: boolean
   url: string | null
