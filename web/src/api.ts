@@ -151,6 +151,7 @@ export interface Settings {
   archiverUrl: string | null
   /** Clips arrive through teslausb: shows the Car tab and polls the device. */
   teslausbEnabled: boolean
+  carLoggerToken: string | null
 }
 
 export interface ArchiverStatus {
@@ -177,6 +178,28 @@ export interface ArchiverSync {
   filesPlanned: number | null
   eventsPlanned: number | null
   filesArchived: number | null
+}
+
+/** The car's state from car-logger on the teslausb Pi. Times are UTC; distances in miles, pressures in bar. */
+export interface CarNow {
+  battery: { at: string | null; level: number | null; rangeMiles: number | null; charging: string | null; limit: number | null; chargerPowerKw: number | null; rateMph: number | null; energyAddedKwh: number | null; portOpen: boolean | null } | null
+  closures: { at: string | null; locked: boolean | null; sentry: string | null; userPresent: boolean | null; open: string[] } | null
+  climate: { at: string | null; insideC: number | null; outsideC: number | null; climateOn: boolean | null } | null
+  tires: { at: string | null; frontLeft: number | null; frontRight: number | null; rearLeft: number | null; rearRight: number | null; warnings: string[] } | null
+  software: { at: string | null; status: string | null; version: string | null } | null
+  drive: { at: string | null; odometerMiles: number | null; gear: string | null; speedMph: number | null } | null
+  body: { at: string | null; locked: boolean; asleep: boolean; userPresent: boolean } | null
+}
+
+export interface CarStatus {
+  configured: boolean
+  url: string | null
+  lastSync: string | null
+  error: string | null
+  readings: number
+  lastReading: string | null
+  now: CarNow | null
+  battery: { at: string; level: number; rangeMiles: number | null }[]
 }
 
 /** One pass of teslausb's archive loop, read from its log. Times are the Pi's own clock, with no zone. */
@@ -511,6 +534,8 @@ export const api = {
   archiver: () => request<Archiver>('GET', '/api/archiver'),
   archiverSync: () => request<void>('POST', '/api/archiver/sync'),
   archiverPoll: () => request<void>('POST', '/api/archiver/poll'),
+  car: () => request<CarStatus>('GET', '/api/car'),
+  carSync: () => request<{ added: number }>('POST', '/api/car/sync'),
 }
 
 export const thumbUrl = (eventId: number) => `/api/media/thumb/${eventId}`

@@ -119,3 +119,18 @@ export const cameraShort = (camera: string) => CAMERAS_SHORT[camera] ?? camera
 export function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(' ')
 }
+
+// The car reports miles, bar and °C. People in the US expect miles, psi and °F; everyone else gets metric.
+const imperial = typeof navigator !== 'undefined' && /-(US|LR|MM)\b/i.test(navigator.language)
+
+export function formatDistance(miles: number): string {
+  return imperial ? `${Math.round(miles).toLocaleString()} mi` : `${Math.round(miles * 1.609344).toLocaleString()} km`
+}
+
+export function formatPressure(bar: number): string {
+  return imperial ? `${Math.round(bar * 14.5038)} psi` : `${bar.toFixed(1)} bar`
+}
+
+export function formatTemperature(celsius: number): string {
+  return imperial ? `${Math.round(celsius * 1.8 + 32)} °F` : `${Math.round(celsius)} °C`
+}

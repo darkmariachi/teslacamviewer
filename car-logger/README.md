@@ -3,7 +3,7 @@
 An optional program for the teslausb Raspberry Pi in the car. It reads the car's state over Bluetooth with a key
 paired to the car, and writes it to log files on the Pi: battery and charging, location and speed while driving,
 locks, doors and windows, climate, tire pressure and software updates. TeslaCam will collect the log when the car
-gets home (not built yet).
+gets home.
 
 It uses no cloud service and needs no Tesla account: it talks to the car the way a phone key does, using
 Tesla's own [vehicle-command](https://github.com/teslamotors/vehicle-command) library.
@@ -74,6 +74,15 @@ You need SSH access to the Pi as root, the car's VIN, and a key card.
 4. Copy `car-logger`, `car-logger.service` and `install.sh` to a folder on the Pi and run `./install.sh` as
    root. It installs the service and starts it. A full teslausb re-setup may remove the service; run the script
    again to put it back.
+
+## Collecting the log in TeslaCam
+
+car-logger answers on port 8722 of the Pi. On first start it creates a token in `/mutable/tesla/sync-token`;
+paste it into **Admin → Car** in TeslaCam. Whenever the car is home, TeslaCam asks for the records after the last
+one it has (`GET /records?after=<file:line>`), saves them, and then tells the Pi it may delete the files it has
+finished with (`POST /ack`). Every request needs the token (`Authorization: Bearer …`), because the log says
+where the car has been. A sync cut short when the car leaves continues next time. If the log folder is started
+afresh, its id (`/mutable/car-log/log-id`) changes and TeslaCam reads it from the beginning.
 
 To remove it: `systemctl disable --now car-logger`, delete `/mutable/tesla` and `/mutable/car-log`, and delete
 the key on the car's Locks screen. Your phones and key cards are not affected.

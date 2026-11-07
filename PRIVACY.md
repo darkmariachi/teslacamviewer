@@ -33,7 +33,8 @@ contact its authors or any service they run. Your clips stay on your own compute
   footage itself.
 - **car-logger's log, only if you install it on the teslausb Pi.** It records the car's state, including where
   it drives, on the Pi in `/mutable/car-log`. It talks to the car over Bluetooth and sends nothing over the
-  internet. See [car-logger/README.md](car-logger/README.md).
+  internet. If you give the app its token, the app collects the readings over your home network and keeps them in
+  `teslacam.db`; the Pi then deletes them. See [car-logger/README.md](car-logger/README.md).
 
 ## What is in the footage
 

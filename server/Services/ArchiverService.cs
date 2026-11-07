@@ -37,7 +37,7 @@ public record ArchiverNotification(bool IsStart, int? Files, int? Events);
 /// announces through its webhook.
 /// </summary>
 public partial class ArchiverService(IDbContextFactory<AppDb> dbf, SettingsService settings, Scanner scanner,
-    IHttpClientFactory http, ILogger<ArchiverService> log) : BackgroundService
+    IHttpClientFactory http, CarLogService carLog, ILogger<ArchiverService> log) : BackgroundService
 {
     private const string TokenKey = "archiverToken";
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(30);
@@ -132,7 +132,17 @@ public partial class ArchiverService(IDbContextFactory<AppDb> dbf, SettingsServi
             }
         }
         await RecordAsync(status, archiveLog, ct);
+
+        // car-logger lives on the same Pi, so it is only reachable while teslausb answers.
+        if (status != null && DateTime.UtcNow - _lastCarSync >= CarSyncInterval)
+        {
+            _lastCarSync = DateTime.UtcNow;
+            await carLog.SyncAsync(ct);
+        }
     }
+
+    private static readonly TimeSpan CarSyncInterval = TimeSpan.FromMinutes(1);
+    private DateTime _lastCarSync = DateTime.MinValue;
 
     private static readonly TimeSpan LogInterval = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan SampleInterval = TimeSpan.FromMinutes(5);

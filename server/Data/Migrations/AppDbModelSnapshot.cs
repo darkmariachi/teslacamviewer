@@ -106,6 +106,47 @@ namespace TeslaCam.Data.Migrations
                     b.ToTable("ArchiverSyncs");
                 });
 
+            modelBuilder.Entity("TeslaCam.Data.CarReading", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("CarTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("CarTimeEstimated")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Data")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("PiTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Source")
+                        .IsUnique();
+
+                    b.HasIndex("Kind", "CarTime");
+
+                    b.ToTable("CarReadings");
+                });
+
             modelBuilder.Entity("TeslaCam.Data.ClipFile", b =>
                 {
                     b.Property<int>("Id")

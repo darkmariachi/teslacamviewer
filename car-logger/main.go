@@ -9,6 +9,7 @@ import (
 	"errors"
 	"flag"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -25,6 +26,8 @@ type options struct {
 	vinFile   string
 	idleEvery time.Duration
 	once      bool
+	listen    string
+	tokenFile string
 }
 
 func main() {
@@ -33,6 +36,8 @@ func main() {
 	flag.StringVar(&o.keyFile, "key", "/mutable/tesla/private.pem", "private key paired with the car")
 	flag.StringVar(&o.vinFile, "vin-file", "/mutable/tesla/vin", "file holding the car's VIN")
 	flag.DurationVar(&o.idleEvery, "idle-every", 30*time.Minute, "how often to take full readings while the car is parked and unattended")
+	flag.StringVar(&o.listen, "listen", ":8722", "address for TeslaCam to collect the log from (empty to turn off)")
+	flag.StringVar(&o.tokenFile, "token-file", "/mutable/tesla/sync-token", "file holding the token TeslaCam must send, created if missing")
 	flag.BoolVar(&o.once, "once", false, "take every reading once, print them, and exit (for testing)")
 	flag.Parse()
 	log.SetFlags(0) // journald adds its own timestamps
@@ -63,7 +68,23 @@ func main() {
 		log.Fatalf("open log: %v", err)
 	}
 	defer store.Close()
-	l := &Logger{store: store, schedule: DefaultSchedule(o.idleEvery), connect: connect, statusPath: filepath.Join(o.dir, "status.json")}
+	statusPath := filepath.Join(o.dir, "status.json")
+
+	if o.listen != "" {
+		token, err := LoadOrCreateSecret(o.tokenFile)
+		if err != nil {
+			log.Fatalf("sync token: %v", err)
+		}
+		server := &http.Server{Addr: o.listen, Handler: SyncHandler(store, token, statusPath), ReadHeaderTimeout: 10 * time.Second}
+		go func() {
+			if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				log.Printf("sync server: %v", err)
+			}
+		}()
+		defer server.Close()
+	}
+
+	l := &Logger{store: store, schedule: DefaultSchedule(o.idleEvery), connect: connect, statusPath: statusPath}
 	l.Run(ctx)
 }
 

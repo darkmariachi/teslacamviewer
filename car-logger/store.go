@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -34,6 +35,8 @@ type Store struct {
 	file     *os.File
 	number   int
 	size     int64
+	current  atomic.Int64 // the file being written, read by the sync server
+	logID    string
 }
 
 func OpenStore(dir string, maxFile, maxTotal int64) (*Store, error) {
@@ -41,6 +44,11 @@ func OpenStore(dir string, maxFile, maxTotal int64) (*Store, error) {
 		return nil, err
 	}
 	s := &Store{dir: dir, maxFile: maxFile, maxTotal: maxTotal}
+	id, err := LoadOrCreateSecret(filepath.Join(dir, "log-id"))
+	if err != nil {
+		return nil, err
+	}
+	s.logID = id
 	numbers, err := s.numbers()
 	if err != nil {
 		return nil, err
@@ -66,8 +74,12 @@ func (s *Store) open(number int) error {
 		return err
 	}
 	s.file, s.number, s.size = f, number, info.Size()
+	s.current.Store(int64(number))
 	return nil
 }
+
+// Current is the number of the file being written.
+func (s *Store) Current() int { return int(s.current.Load()) }
 
 // numbers lists the existing log files, oldest first.
 func (s *Store) numbers() ([]int, error) {

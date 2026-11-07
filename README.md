@@ -100,7 +100,7 @@ been run on Windows 11. Here is what has and has not been tried.
 | Six-camera cars (pillar cameras)                            | Built; tried with generated clips only         |
 | HEVC clips                                                  | Built; not yet tried with real HEVC footage    |
 | macOS                                                       | Not yet: needs Apple code signing              |
-| car-logger (car state over Bluetooth, on the teslausb Pi)   | Experimental; logging only, not yet in the app |
+| car-logger (car state over Bluetooth, on the teslausb Pi)   | Experimental; tried on one car, parked only   |
 
 If you try one of the rows that is not marked "Works", an issue saying how it went is very welcome.
 
@@ -300,8 +300,9 @@ without a login. "Upload now" asks teslausb to start archiving immediately.
 
 [car-logger](car-logger/README.md) is an optional program for the same Pi. With a key paired to the car over
 Bluetooth, it logs battery, charging, location while driving, locks and doors, climate and tire pressure, with
-no cloud service or Tesla account. For now it only writes the log on the Pi; collecting it into a car
-dashboard in TeslaCam comes next.
+no cloud service or Tesla account. Paste the token it creates into **Admin → Car**, and whenever the car is
+home the app collects the readings and shows the battery, charging, locks, open doors and windows, tire pressures
+and two weeks of battery level at the top of the Car tab. Drives and charging sessions come next.
 
 ## Sentry at home
 

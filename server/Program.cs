@@ -32,6 +32,7 @@ builder.Services.AddSingleton<Scanner>();
 builder.Services.AddSingleton<JobRunner>();
 builder.Services.AddSingleton<TrashService>();
 builder.Services.AddSingleton<RangeKeeper>();
+builder.Services.AddSingleton<CarLogService>();
 builder.Services.AddSingleton<ArchiverService>();
 builder.Services.AddSingleton<ImportService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<Scanner>());
@@ -97,6 +98,7 @@ app.MapMediaApi();
 app.MapCollectionsApi();
 app.MapAdminApi();
 app.MapArchiverApi();
+app.MapCarApi();
 app.MapImportApi();
 
 // Unknown API paths are errors; every other path belongs to the single-page app.
