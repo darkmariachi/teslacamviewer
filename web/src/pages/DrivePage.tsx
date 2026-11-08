@@ -95,9 +95,10 @@ function DriveView({ drive }: { drive: CarDriveDetail }) {
   return (
     <>
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <Card className="overflow-hidden">
+        <Card className="flex flex-col overflow-hidden">
           {route.length > 0 ? (
-            <RouteMap route={route} marker={marker} className="h-80 sm:h-[26rem]" />
+            // Beside the stats on wide screens the card is as tall as they are; let the map fill it.
+            <RouteMap route={route} marker={marker} className="h-80 sm:h-[26rem] xl:h-auto xl:min-h-[26rem] xl:flex-1" />
           ) : (
             <p className="flex h-40 items-center justify-center text-sm text-faint">No GPS readings for this drive.</p>
           )}
