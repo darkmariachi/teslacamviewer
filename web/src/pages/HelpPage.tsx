@@ -224,7 +224,8 @@ export default function HelpPage() {
               two weeks, with the last drive below. The Drives tab lists the last 30 days of drives. Open one to see its route
               on a map, charts of speed and power (hover over them to see where the car was at that moment), and its numbers:
               average and top speed, energy used and won back by regenerative braking, battery, stops and climb. A stop in Park
-              of under three minutes counts as part of the same drive. Speed and power are read about every 15 seconds, so
+              of under three minutes counts as part of the same drive. The same drives are drawn as blue lines on the Map page;
+              click one to see its numbers and speed beside the map, or turn them off with the Drives button. Speed and power are read about every 15 seconds, so
               energy is an estimate. The Pi deletes readings once the app has them. It is experimental: we are still checking how it
               affects the car's battery while parked.
             </p>

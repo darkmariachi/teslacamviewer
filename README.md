@@ -304,7 +304,8 @@ no cloud service or Tesla account. Paste the token it creates into **Admin → C
 home the app collects the readings, and a **Car** page appears in the menu: a drawing of the car with each tire's
 pressure and anything open, the lock and Sentry, the battery and charging, cabin temperature, two weeks of
 battery level. A **Drives** tab lists the last 30 days; each drive has its route on a map, speed and power
-charts tied to the map, and its energy use, regen, battery, stops and climb. Charging sessions come next.
+charts tied to the map, and its energy use, regen, battery, stops and climb. Drives also show as lines on the
+**Map** page, where clicking one opens its numbers beside the map. Charging sessions come next.
 
 ## Sentry at home
 
