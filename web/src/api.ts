@@ -194,6 +194,9 @@ export interface CarNow {
 export interface CarStatus {
   configured: boolean
   url: string | null
+  /** Whether the Pi (and so car-logger) is on the home network right now. */
+  home: boolean
+  lastHome: string | null
   lastSync: string | null
   error: string | null
   readings: number

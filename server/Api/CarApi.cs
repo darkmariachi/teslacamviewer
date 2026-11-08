@@ -14,12 +14,17 @@ public static class CarApi
         {
             var s = settings.Current;
             var url = s.TeslausbEnabled == true ? CarLogService.LoggerUrl(s.ArchiverUrl) : null;
+            // car-logger is only reachable while teslausb is: while the car is away, readings simply wait on the Pi.
+            var visit = await db.ArchiverSessions.AsNoTracking().OrderByDescending(v => v.Id).FirstOrDefaultAsync(ct);
+            var home = visit is { Open: true } && DateTime.UtcNow - visit.LastSeenAt < TimeSpan.FromMinutes(3);
             return Results.Ok(new
             {
                 configured = url != null && s.CarLoggerToken != null,
                 url,
+                home,
+                lastHome = Dto.Utc(visit?.LastSeenAt),
                 lastSync = Dto.Utc(car.LastSync),
-                error = car.LastError,
+                error = home ? car.LastError : null,
                 readings = await db.CarReadings.CountAsync(ct),
                 lastReading = Dto.Utc(await db.CarReadings.MaxAsync(r => r.CarTime, ct)),
                 now = await car.NowAsync(ct),

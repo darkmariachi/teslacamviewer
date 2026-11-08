@@ -95,9 +95,13 @@ public class CarLogService(IDbContextFactory<AppDb> dbf, SettingsService setting
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or FormatException && !ct.IsCancellationRequested)
         {
-            LastError = ex is HttpRequestException { StatusCode: System.Net.HttpStatusCode.Unauthorized }
-                ? "car-logger refused the token. Copy it again from the Pi."
-                : $"Couldn't collect the car's readings: {ex.Message}";
+            LastError = ex switch
+            {
+                HttpRequestException { StatusCode: System.Net.HttpStatusCode.Unauthorized } => "car-logger refused the token. Copy it again from the Pi.",
+                // Most often the car simply left mid-collection; the next visit picks up where this one stopped.
+                HttpRequestException { StatusCode: null } or TaskCanceledException => "car-logger on the Pi didn't answer. If the car is home, check that car-logger is running.",
+                _ => $"car-logger sent something unexpected: {ex.Message}",
+            };
             return 0;
         }
     }

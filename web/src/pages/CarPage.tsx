@@ -77,11 +77,19 @@ function CarView({ status, now }: { status: CarStatus; now: CarNow }) {
             Last reading {formatRelative(status.lastReading)}
             {status.lastReading && <span className="text-faint"> · {formatDateTime(status.lastReading)}</span>}
           </p>
+          {!status.home && (
+            <p className="mt-1 text-sm text-dim">
+              The car is away{status.lastHome && ` (left ${formatRelative(status.lastHome)})`}. These are its last readings; car-logger keeps
+              recording, and the rest arrive when it's back home.
+            </p>
+          )}
           {status.error && <p className="mt-1 text-sm text-warn">{status.error}</p>}
         </div>
-        <Button variant="ghost" icon={<RefreshCw className="size-4" />} busy={syncing} onClick={collect}>
-          Collect now
-        </Button>
+        {status.home && (
+          <Button variant="ghost" icon={<RefreshCw className="size-4" />} busy={syncing} onClick={collect}>
+            Collect now
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
