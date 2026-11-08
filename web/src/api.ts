@@ -205,6 +205,19 @@ export interface CarStatus {
   battery: { at: string; level: number; rangeMiles: number | null }[]
 }
 
+/** A drive pieced together from car-logger's readings. Times are UTC; the route is [longitude, latitude] pairs. */
+export interface CarDriveSummary {
+  start: string
+  end: string
+  miles: number | null
+  batteryStart: number | null
+  batteryEnd: number | null
+  maxSpeedMph: number | null
+  from: string | null
+  to: string | null
+  route: [number, number][]
+}
+
 /** One pass of teslausb's archive loop, read from its log. Times are the Pi's own clock, with no zone. */
 export interface ArchiverRun {
   startedAt: string | null
@@ -539,6 +552,7 @@ export const api = {
   archiverPoll: () => request<void>('POST', '/api/archiver/poll'),
   car: () => request<CarStatus>('GET', '/api/car'),
   carSync: () => request<{ added: number }>('POST', '/api/car/sync'),
+  carDrives: (days = 30) => request<CarDriveSummary[]>('GET', `/api/car/drives?days=${days}`),
 }
 
 /** The car's state from car-logger; shared so the sidebar and the Car page use one cache entry. */

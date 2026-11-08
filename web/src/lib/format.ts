@@ -127,6 +127,16 @@ export function formatDistance(miles: number): string {
   return imperial ? `${Math.round(miles).toLocaleString()} mi` : `${Math.round(miles * 1.609344).toLocaleString()} km`
 }
 
+/** Like formatDistance, with a decimal for the short distances of a drive around town. */
+export function formatTripDistance(miles: number): string {
+  const value = imperial ? miles : miles * 1.609344
+  return `${value < 100 ? value.toFixed(1) : Math.round(value).toLocaleString()} ${imperial ? 'mi' : 'km'}`
+}
+
+export function formatSpeed(mph: number): string {
+  return imperial ? `${Math.round(mph)} mph` : `${Math.round(mph * 1.609344)} km/h`
+}
+
 export function formatPressure(bar: number): string {
   return imperial ? `${Math.round(bar * 14.5038)} psi` : `${bar.toFixed(1)} bar`
 }

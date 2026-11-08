@@ -221,7 +221,9 @@ export default function HelpPage() {
               Whenever the car is home, the app collects the new readings from the Pi, and a Car page appears in the menu: a
               drawing of the car with each tire's pressure (low ones marked), open doors, windows, trunk and frunk, the lock and
               Sentry, then the battery and charging, cabin temperature, odometer, software updates and the battery over the last
-              two weeks. The Pi deletes readings once the app has them. It is experimental: we are still checking how it
+              two weeks. Below that are the last 30 days of drives: when, how far, the battery each one took and its top speed.
+              Pick one to see its route on a map. A stop in Park of under three minutes counts as part of the same drive. The
+              Pi deletes readings once the app has them. It is experimental: we are still checking how it
               affects the car's battery while parked.
             </p>
           </Section>

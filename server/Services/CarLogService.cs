@@ -226,6 +226,17 @@ public class CarLogService(IDbContextFactory<AppDb> dbf, SettingsService setting
         return points;
     }
 
+    /// <summary>Drives over the last days, newest first.</summary>
+    public async Task<List<DriveSummary>> DrivesAsync(int days, CancellationToken ct = default)
+    {
+        await using var db = await dbf.CreateDbContextAsync(ct);
+        var since = DateTime.UtcNow.AddDays(-days);
+        var rows = await db.CarReadings.AsNoTracking()
+            .Where(r => (r.Mode == "driving" || r.Kind == "charge") && (r.CarTime ?? r.PiTime) >= since)
+            .ToListAsync(ct);
+        return CarDrives.Build(rows);
+    }
+
     private static List<string> OpenClosures(JsonElement c)
     {
         var names = new (string Field, string Name)[]
