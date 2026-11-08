@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -138,6 +139,11 @@ type Status struct {
 	LastRecord  time.Time `json:"lastRecord,omitzero"`
 	Records     int       `json:"records"`
 	Started     time.Time `json:"started"`
+	// How the Bluetooth link is holding up: links the car dropped, answers slower than slowRead,
+	// and how long the last connection took to set up.
+	Drops           int    `json:"drops"`
+	SlowReads       int    `json:"slowReads"`
+	LastConnectTook string `json:"lastConnectTook,omitempty"`
 }
 
 const tick = 5 * time.Second
@@ -176,16 +182,11 @@ func (l *Logger) Round(ctx context.Context) time.Duration {
 		return min(wait, time.Minute)
 	}
 	if l.car == nil {
-		cctx, cancel := context.WithTimeout(ctx, 45*time.Second)
-		car, err := l.connect(cctx)
-		cancel()
-		if err != nil {
+		if err := l.reconnect(ctx); err != nil {
 			l.fail("connect", err)
 			// Back off while the car is out of reach or the radio is struggling, up to two minutes.
 			return min(time.Duration(l.failures)*15*time.Second, 2*time.Minute)
 		}
-		l.car = car
-		l.failures = 0
 	}
 
 	now := l.clockNow()
@@ -242,12 +243,56 @@ func (l *Logger) untilDue(now time.Time) time.Duration {
 	return soonest
 }
 
-// read takes one reading and records it. On failure it drops the connection so the next round
-// starts clean, and reports false.
-func (l *Logger) read(ctx context.Context, kind Kind, get func(context.Context) (Reading, error)) bool {
+func (l *Logger) reconnect(ctx context.Context) error {
+	cctx, cancel := context.WithTimeout(ctx, 45*time.Second)
+	defer cancel()
+	start := time.Now()
+	car, err := l.connect(cctx)
+	if err != nil {
+		return err
+	}
+	l.car = car
+	l.failures = 0
+	l.status.LastConnectTook = time.Since(start).Round(100 * time.Millisecond).String()
+	return nil
+}
+
+// slowRead is when a single answer is worth a line in the journal: normally they take under a second.
+const slowRead = 10 * time.Second
+
+func (l *Logger) get(ctx context.Context, kind Kind, get func(context.Context) (Reading, error)) (Reading, error) {
 	rctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	start := time.Now()
 	r, err := get(rctx)
-	cancel()
+	if took := time.Since(start); err == nil && took > slowRead {
+		l.status.SlowReads++
+		log.Printf("%s took %s", kind, took.Round(100*time.Millisecond))
+	}
+	return r, err
+}
+
+// linkLost spots the car (or a struggling radio) closing the Bluetooth link under us, which
+// happens every minute or two while the link is held. A fresh connection usually works at once.
+func linkLost(err error) bool {
+	s := err.Error()
+	return strings.Contains(s, "closed pipe") || strings.Contains(s, "input channel closed")
+}
+
+// read takes one reading and records it. When the link was dropped it reconnects and tries once
+// more straight away, so a drive doesn't lose a round to it. On failure it drops the connection
+// so the next round starts clean, and reports false.
+func (l *Logger) read(ctx context.Context, kind Kind, get func(context.Context) (Reading, error)) bool {
+	r, err := l.get(ctx, kind, get)
+	if err != nil && linkLost(err) && ctx.Err() == nil {
+		l.status.Drops++
+		l.disconnect()
+		if cerr := l.reconnect(ctx); cerr == nil {
+			r, err = l.get(ctx, kind, get)
+		} else {
+			err = fmt.Errorf("%w (and reconnecting failed: %v)", err, cerr)
+		}
+	}
 	now := l.clockNow()
 	if err != nil {
 		l.fail(string(kind), err)

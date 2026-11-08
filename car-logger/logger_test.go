@@ -147,6 +147,7 @@ type fakeCar struct {
 	asked  []Kind
 	closed int
 	failOn Kind
+	dropOn Kind // fails once as if the car closed the link
 }
 
 func (c *fakeCar) Body(ctx context.Context) (Reading, error) {
@@ -162,6 +163,10 @@ func (c *fakeCar) State(ctx context.Context, kind Kind) (Reading, error) {
 	c.asked = append(c.asked, kind)
 	if kind == c.failOn {
 		return Reading{}, errors.New("timed out")
+	}
+	if kind == c.dropOn {
+		c.dropOn = ""
+		return Reading{}, errors.New("send ATT request failed: io: read/write on closed pipe")
 	}
 	return stateReading(&carserver.VehicleData{ChargeState: &carserver.ChargeState{}})
 }
@@ -232,5 +237,21 @@ func TestLoggerDropsTheConnectionAfterAFailedRead(t *testing.T) {
 	l.Round(context.Background())
 	if car.closed != 1 || l.car != nil || l.status.LastError == "" {
 		t.Fatalf("closed %d, still connected %v, error %q", car.closed, l.car != nil, l.status.LastError)
+	}
+}
+
+func TestLoggerReconnectsAndRetriesWhenTheLinkDrops(t *testing.T) {
+	now := time.Now()
+	car := &fakeCar{body: []*vcsec.VehicleStatus{awakeInside}, dropOn: KindCharge}
+	l := newTestLogger(t, car, &now)
+	connects := 0
+	l.connect = func(context.Context) (Car, error) { connects++; return car, nil }
+
+	l.Round(context.Background())
+	if connects != 2 || car.closed != 1 || l.car == nil {
+		t.Fatalf("connected %d times, closed %d, still connected %v", connects, car.closed, l.car != nil)
+	}
+	if l.status.Drops != 1 || l.status.Records != 1+len(StateKinds) {
+		t.Fatalf("drops %d, recorded %d", l.status.Drops, l.status.Records)
 	}
 }
