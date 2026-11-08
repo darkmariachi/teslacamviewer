@@ -35,6 +35,9 @@ public static class CarApi
         group.MapGet("/drives", async (CarLogService car, int? days, CancellationToken ct) =>
             Results.Ok(await car.DrivesAsync(Math.Clamp(days ?? 30, 1, 365), ct)));
 
+        group.MapGet("/drives/{id:long}", async (CarLogService car, long id, CancellationToken ct) =>
+            await car.DriveAsync(id, ct) is { } drive ? Results.Ok(drive) : Results.NotFound());
+
         group.MapPost("/sync", async (CarLogService car, CancellationToken ct) =>
         {
             var added = await car.SyncAsync(ct);

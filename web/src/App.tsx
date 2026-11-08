@@ -17,6 +17,8 @@ import InsightsPage from './pages/InsightsPage'
 import AdminPage from './pages/AdminPage'
 import HelpPage from './pages/HelpPage'
 import CarPage from './pages/CarPage'
+import DrivesPage from './pages/DrivesPage'
+import DrivePage from './pages/DrivePage'
 
 const NAV = [
   { to: '/', label: 'Events', icon: Video, end: true },
@@ -79,6 +81,8 @@ export default function App() {
         <Route path="/collections/:id" element={<CollectionPage />} />
         <Route path="/insights" element={<InsightsPage />} />
         <Route path="/car" element={<CarPage />} />
+        <Route path="/car/drives" element={<DrivesPage />} />
+        <Route path="/car/drives/:id" element={<DrivePage />} />
         <Route path="/admin/*" element={<AdminPage />} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

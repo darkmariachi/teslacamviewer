@@ -133,6 +133,19 @@ export function formatTripDistance(miles: number): string {
   return `${value < 100 ? value.toFixed(1) : Math.round(value).toLocaleString()} ${imperial ? 'mi' : 'km'}`
 }
 
+export function formatHeight(metres: number): string {
+  return imperial ? `${Math.round(metres * 3.28084).toLocaleString()} ft` : `${Math.round(metres).toLocaleString()} m`
+}
+
+/** Energy per distance, as the car shows it: Wh/mi in the US, Wh/km elsewhere. */
+export function formatEfficiency(whPerMile: number): string {
+  return imperial ? `${Math.round(whPerMile)} Wh/mi` : `${Math.round(whPerMile / 1.609344)} Wh/km`
+}
+
+/** Speed for chart labels and readouts, in the same unit as formatSpeed. */
+export const speedValue = (mph: number) => (imperial ? mph : mph * 1.609344)
+export const speedUnit = imperial ? 'mph' : 'km/h'
+
 export function formatSpeed(mph: number): string {
   return imperial ? `${Math.round(mph)} mph` : `${Math.round(mph * 1.609344)} km/h`
 }

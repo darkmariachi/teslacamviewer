@@ -15,10 +15,10 @@ public class CarDrivesTests
         Source = $"log/{_id}",
     };
 
-    private CarReading Drive(double minutes, int odometer, int speed, string mode = "driving", string? place = null) =>
+    private CarReading Drive(double minutes, int odometer, int speed, string mode = "driving", string? place = null, int? power = null) =>
         Reading("drive", mode, minutes, JsonSerializer.Serialize(new Dictionary<string, object>
         {
-            ["driveState"] = new { shiftState = new { D = new { } }, speed, odometerInHundredthsOfAMile = odometer },
+            ["driveState"] = new { shiftState = new { D = new { } }, speed, power, odometerInHundredthsOfAMile = odometer },
             ["locationState"] = new { locationName = place },
         }));
 
@@ -66,5 +66,36 @@ public class CarDrivesTests
 
         Assert.Equal(1.5, second.Miles);
         Assert.Equal((78, 77), (second.BatteryStart, second.BatteryEnd));
+    }
+
+    [Fact]
+    public void Works_out_energy_stops_and_moving_time()
+    {
+        var readings = new List<CarReading>
+        {
+            Drive(0, 100_000, 30, power: 30),
+            Drive(1, 100_050, 30, power: 30),   // one minute at 30 kW: 0.5 kWh
+            Drive(2, 100_100, 0, power: -30),   // crossing zero halfway: 0.125 kWh each way
+            Drive(3, 100_100, 0, power: -30),   // stopped at a light: 0.5 kWh of regen, not moving
+            Drive(4, 100_150, 25, power: 0),    // 0.25 kWh of regen
+            Drive(5, 100_200, 0, power: 0),     // coming to rest at the end isn't a stop along the way
+            Location(0, 30.267, -97.78),
+            Location(5, 30.27, -97.75),
+        };
+
+        var id = CarDrives.Build(readings).Single().Id;
+        var drive = CarDrives.Detail(readings, id)!;
+
+        Assert.Equal(new DateTimeOffset(T0).ToUnixTimeMilliseconds(), id);
+        Assert.Null(CarDrives.Detail(readings, id + 1));
+        Assert.Equal(6, drive.Samples.Count);
+        Assert.Equal(2, drive.Points.Count);
+        Assert.Equal(300, drive.Stats.DurationSeconds);
+        Assert.Equal(240, drive.Stats.MovingSeconds);
+        Assert.Equal(1, drive.Stats.Stops);
+        Assert.Equal(0.88, drive.Stats.RegenKwh);
+        Assert.Equal(-0.25, drive.Stats.EnergyKwh);
+        Assert.Equal(30, drive.Stats.MaxSpeedMph);
+        Assert.Equal(24, drive.Stats.AvgSpeedMph);
     }
 }

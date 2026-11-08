@@ -5,11 +5,31 @@ import { MAP_STYLE, loadMapLibre } from '../lib/map'
 type Route = [number, number][]
 
 /** A drive's route as a line on the map, with a dot where it started and a ring where it ended. */
-export function RouteMap({ route, className }: { route: Route; className?: string }) {
+export function RouteMap({ route, marker, className }: { route: Route; marker?: [number, number] | null; className?: string }) {
   const node = useRef<HTMLDivElement>(null)
   const map = useRef<MapLibreMap | null>(null)
   const markers = useRef<Marker[]>([])
+  const cursor = useRef<Marker | null>(null)
   const [ready, setReady] = useState(false)
+
+  // Where the car was at the moment hovered in a chart.
+  useEffect(() => {
+    const m = map.current
+    if (!ready || !m) return
+    if (!marker) {
+      cursor.current?.remove()
+      cursor.current = null
+      return
+    }
+    if (cursor.current) {
+      cursor.current.setLngLat(marker)
+      return
+    }
+    loadMapLibre().then((maplibre) => {
+      const dot = Object.assign(document.createElement('div'), { className: 'size-3.5 rounded-full border-2 border-ink bg-fg shadow-[0_0_0_5px_rgb(245_245_247/0.25)]' })
+      cursor.current = new maplibre.Marker({ element: dot }).setLngLat(marker).addTo(m)
+    })
+  }, [ready, marker])
 
   useEffect(() => {
     let cancelled = false

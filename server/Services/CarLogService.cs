@@ -227,14 +227,23 @@ public class CarLogService(IDbContextFactory<AppDb> dbf, SettingsService setting
     }
 
     /// <summary>Drives over the last days, newest first.</summary>
-    public async Task<List<DriveSummary>> DrivesAsync(int days, CancellationToken ct = default)
+    public async Task<List<DriveSummary>> DrivesAsync(int days, CancellationToken ct = default) =>
+        CarDrives.Build(await DriveReadingsAsync(DateTime.UtcNow.AddDays(-days), DateTime.MaxValue, ct));
+
+    /// <summary>One drive in full; the id is its start time in Unix milliseconds.</summary>
+    public async Task<DriveDetail?> DriveAsync(long id, CancellationToken ct = default)
+    {
+        var start = DateTimeOffset.FromUnixTimeMilliseconds(id).UtcDateTime;
+        // Drives run for hours at most; read a day either side so the battery and weather before and after are in reach.
+        return CarDrives.Detail(await DriveReadingsAsync(start.AddHours(-1), start.AddDays(1), ct), id);
+    }
+
+    private async Task<List<CarReading>> DriveReadingsAsync(DateTime from, DateTime to, CancellationToken ct)
     {
         await using var db = await dbf.CreateDbContextAsync(ct);
-        var since = DateTime.UtcNow.AddDays(-days);
-        var rows = await db.CarReadings.AsNoTracking()
-            .Where(r => (r.Mode == "driving" || r.Kind == "charge") && (r.CarTime ?? r.PiTime) >= since)
+        return await db.CarReadings.AsNoTracking()
+            .Where(r => (r.Mode == "driving" || r.Kind == "charge" || r.Kind == "climate") && (r.CarTime ?? r.PiTime) >= from && (r.CarTime ?? r.PiTime) < to)
             .ToListAsync(ct);
-        return CarDrives.Build(rows);
     }
 
     private static List<string> OpenClosures(JsonElement c)

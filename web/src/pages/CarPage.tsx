@@ -1,23 +1,13 @@
 import { useState, type MouseEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowRight, Gauge, Lock, LockOpen, RefreshCw, Route, Shield, Snowflake, Thermometer, Download, Zap } from 'lucide-react'
-import { api, carQuery, type CarDriveSummary, type CarNow, type CarStatus } from '../api'
-import {
-  cx,
-  formatDate,
-  formatDateTime,
-  formatDistance,
-  formatDuration,
-  formatRelative,
-  formatSpeed,
-  formatTemperature,
-  formatTime,
-  formatTripDistance,
-} from '../lib/format'
+import { Gauge, Lock, LockOpen, RefreshCw, Shield, Snowflake, Thermometer, Download, Zap } from 'lucide-react'
+import { api, carQuery, drivesQuery, type CarNow, type CarStatus } from '../api'
+import { cx, formatDateTime, formatDistance, formatRelative, formatTemperature } from '../lib/format'
 import { Button, Card, Spinner } from '../components/ui'
 import CarGraphic from '../components/CarGraphic'
-import { RouteMap } from '../components/RouteMap'
+import { CarTabs } from '../components/CarTabs'
+import { DriveRow } from './DrivesPage'
 
 const CHARGING: Record<string, string> = {
   Disconnected: 'Unplugged',
@@ -97,11 +87,14 @@ function CarView({ status, now }: { status: CarStatus; now: CarNow }) {
           )}
           {status.error && <p className="mt-1 text-sm text-warn">{status.error}</p>}
         </div>
-        {status.home && (
-          <Button variant="ghost" icon={<RefreshCw className="size-4" />} busy={syncing} onClick={collect}>
-            Collect now
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {status.home && (
+            <Button variant="ghost" icon={<RefreshCw className="size-4" />} busy={syncing} onClick={collect}>
+              Collect now
+            </Button>
+          )}
+          <CarTabs />
+        </div>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
@@ -154,97 +147,30 @@ function CarView({ status, now }: { status: CarStatus; now: CarNow }) {
         </div>
       </div>
 
-      <Drives />
+      <LastDrive />
 
       {status.battery.length > 1 && <BatteryChart points={status.battery} />}
     </div>
   )
 }
 
-/** The last month of drives as a list, with the picked one's route on a map. */
-function Drives() {
-  const drives = useQuery({ queryKey: ['car', 'drives'], queryFn: () => api.carDrives(30) })
-  const [picked, setPicked] = useState(0)
-  const list = drives.data ?? []
-  if (list.length === 0) return null
-  const drive = list[Math.min(picked, list.length - 1)]
-  const totalMiles = list.reduce((sum, d) => sum + (d.miles ?? 0), 0)
-
+/** The most recent drive, leading to its page; the rest are on the Drives tab. */
+function LastDrive() {
+  const drives = useQuery(drivesQuery)
+  const last = drives.data?.[0]
+  if (!last) return null
   return (
-    <Card className="overflow-hidden">
-      <div className="flex flex-wrap items-baseline justify-between gap-2 px-5 pt-5">
-        <h2 className="flex items-center gap-1.5 text-[15px] font-semibold">
-          <Route className="size-4 text-dim" /> Drives, last 30 days
-        </h2>
-        <span className="tabular text-[13px] text-dim">
-          {list.length} {list.length === 1 ? 'drive' : 'drives'} · {formatTripDistance(totalMiles)}
-        </span>
+    <div>
+      <div className="mb-2 flex items-baseline justify-between">
+        <h2 className="text-[15px] font-semibold">Last drive</h2>
+        <Link to="/car/drives" className="text-[13px] text-dim hover:text-fg">
+          All drives
+        </Link>
       </div>
-      <div className="mt-4 grid border-t border-line lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
-        <ul className="max-h-[26rem] overflow-y-auto border-line lg:border-r">
-          {list.map((d, i) => (
-            <li key={d.start}>
-              <DriveRow drive={d} active={d === drive} onPick={() => setPicked(i)} />
-            </li>
-          ))}
-        </ul>
-        {drive.route.length > 0 ? (
-          <RouteMap route={drive.route} className="h-72 border-t border-line lg:h-auto lg:min-h-[26rem] lg:border-t-0" />
-        ) : (
-          <p className="flex h-40 items-center justify-center border-t border-line text-sm text-faint lg:h-auto lg:border-t-0">
-            No GPS readings for this drive.
-          </p>
-        )}
-      </div>
-    </Card>
-  )
-}
-
-function DriveRow({ drive: d, active, onPick }: { drive: CarDriveSummary; active: boolean; onPick: () => void }) {
-  const seconds = (new Date(d.end).getTime() - new Date(d.start).getTime()) / 1000
-  const used = d.batteryStart != null && d.batteryEnd != null ? d.batteryStart - d.batteryEnd : null
-  return (
-    <button
-      type="button"
-      onClick={onPick}
-      aria-pressed={active}
-      className={cx(
-        'block w-full border-b border-line px-5 py-3.5 text-left transition-colors last:border-b-0',
-        active ? 'bg-raised' : 'hover:bg-raised/60',
-      )}
-    >
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="text-[14px] font-medium">
-          {formatDate(d.start)}
-          <span className="text-dim">
-            {' '}
-            · {formatTime(d.start)} – {formatTime(d.end)}
-          </span>
-        </span>
-        <span className="tabular shrink-0 text-[14px] font-semibold">{d.miles != null ? formatTripDistance(d.miles) : '–'}</span>
-      </div>
-      {(d.from || d.to) && (
-        <p className="mt-1 flex min-w-0 items-center gap-1.5 text-[13px] text-dim">
-          <span className="truncate">{d.from ?? '?'}</span>
-          {d.to && d.to !== d.from && (
-            <>
-              <ArrowRight className="size-3.5 shrink-0 text-faint" />
-              <span className="truncate">{d.to}</span>
-            </>
-          )}
-        </p>
-      )}
-      <p className="tabular mt-1 text-[12.5px] text-faint">
-        {formatDuration(seconds)}
-        {d.batteryStart != null && d.batteryEnd != null && (
-          <>
-            {' '}
-            · Battery {d.batteryStart}% → {d.batteryEnd}%{used != null && used > 0 && ` (−${used}%)`}
-          </>
-        )}
-        {d.maxSpeedMph != null && d.maxSpeedMph > 0 && <> · Top {formatSpeed(d.maxSpeedMph)}</>}
-      </p>
-    </button>
+      <Card className="overflow-hidden">
+        <DriveRow drive={last} />
+      </Card>
+    </div>
   )
 }
 
