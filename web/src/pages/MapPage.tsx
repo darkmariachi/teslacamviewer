@@ -1,22 +1,41 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { MapPinOff, Route, Star, X } from 'lucide-react'
+import { MapPinOff, Route, SlidersHorizontal, Star, X } from 'lucide-react'
 import type { GeoJSONSource, Map as MapLibreMap, Marker } from 'maplibre-gl'
-import { api, drivesQuery, thumbUrl, type EventType, type MapPoint } from '../api'
+import { api, thumbUrl, type EventType, type MapPoint } from '../api'
 import { DrivePane } from '../components/DrivePane'
 import { MAP_STYLE, loadMapLibre } from '../lib/map'
-import { cx, eventTitle, formatDateTime } from '../lib/format'
-import { Segmented, Spinner } from '../components/ui'
+import { cx, eventTitle, formatDateTime, reasonLabel } from '../lib/format'
+import { Segmented, Spinner, inputClass } from '../components/ui'
 
 const TYPE_COLOR: Record<EventType, string> = { sentry: '#e82127', saved: '#f5f5f7', recent: '#3e6ae1' }
 
+type Period = 'all' | '7' | '30' | '90' | 'custom'
+
+/** A Date as YYYY-MM-DD in local time, the form the date inputs and the events API use. */
+const localDay = (d: Date) => d.toLocaleDateString('en-CA')
+
 /** Every located event on one map. Nearby events cluster; a cluster that can't split further opens as a list. */
 export default function MapPage() {
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
   const focusId = Number(params.get('focus')) || null
   const [type, setType] = useState<'all' | EventType>('all')
   const [favorite, setFavorite] = useState(false)
+  // The rest of the filters live in the address, so a filtered map can be bookmarked or shared.
+  const reason = params.get('reason') ?? undefined
+  const city = params.get('city') ?? undefined
+  const collection = Number(params.get('collection')) || undefined
+  const customFrom = params.get('from') ?? undefined
+  const customTo = params.get('to') ?? undefined
+  const period: Period = customFrom || customTo ? 'custom' : ((params.get('period') as Period | null) ?? 'all')
+  const days = period === 'all' || period === 'custom' ? null : Number(period)
+  // Read the clock once; "last 7 days" doesn't need to roll over while the page is open.
+  const [today] = useState(() => Date.now())
+  const from = days ? localDay(new Date(today - (days - 1) * 86_400_000)) : customFrom
+  const to = days ? undefined : customTo
+  const [showFilters, setShowFilters] = useState(false)
+  const filterCount = [reason, city, collection, customFrom, customTo].filter(Boolean).length
   const [picked, setPicked] = useState<MapPoint[] | null>(null)
   const [ready, setReady] = useState(false)
   const [showDrives, setShowDrives] = useState(true)
@@ -28,15 +47,38 @@ export default function MapPage() {
   const fitted = useRef(false)
 
   const points = useQuery({
-    queryKey: ['map', type, favorite],
-    queryFn: () => api.mapPoints({ type: type === 'all' ? undefined : type, favorite: favorite || undefined }),
+    queryKey: ['map', type, favorite, reason, city, collection, from, to],
+    queryFn: () =>
+      api.mapPoints({ type: type === 'all' ? undefined : type, favorite: favorite || undefined, reason, city, collection, from, to }),
+    placeholderData: (previous) => previous,
   })
+  const facets = useQuery({ queryKey: ['facets'], queryFn: api.facets })
+  const collections = useQuery({ queryKey: ['collections'], queryFn: api.collections })
   const byId = useMemo(() => new Map((points.data ?? []).map((p) => [p.id, p])), [points.data])
   const byIdRef = useRef(byId)
   byIdRef.current = byId
-  // Drives come from car-logger; without it the query just comes back empty and nothing is drawn.
-  const drives = useQuery({ ...drivesQuery, retry: false })
-  const driveList = useMemo(() => drives.data ?? [], [drives.data])
+  // Drives come from car-logger; without it the query just comes back empty and nothing is drawn. They follow
+  // the time period; the other filters are about events.
+  const drives = useQuery({ queryKey: ['car', 'drives', days ?? 365], queryFn: () => api.carDrives(days ?? 365), retry: false })
+  const driveList = useMemo(
+    () => (drives.data ?? []).filter((d) => (!from || localDay(new Date(d.start)) >= from) && (!to || localDay(new Date(d.start)) <= to)),
+    [drives.data, from, to],
+  )
+  const hasDrives = (drives.data?.length ?? 0) > 0
+
+  function setFilter(changes: Record<string, string | undefined>) {
+    const next = new URLSearchParams(params)
+    next.delete('focus')
+    for (const [key, value] of Object.entries(changes)) {
+      if (value) next.set(key, value)
+      else next.delete(key)
+    }
+    setParams(next, { replace: true })
+  }
+
+  function setPeriod(p: Period) {
+    setFilter({ period: p === 'all' || p === 'custom' ? undefined : p, from: undefined, to: undefined })
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -251,14 +293,38 @@ export default function MapPage() {
         >
           <Star className="size-4" fill={favorite ? 'currentColor' : 'none'} /> Favorites
         </button>
-        {driveList.length > 0 && (
+        <div className="pointer-events-auto rounded-xl bg-ink/80 backdrop-blur">
+          <Segmented
+            value={period === 'custom' ? ('custom' as Period) : period}
+            onChange={setPeriod}
+            options={[
+              { value: 'all', label: 'All time' },
+              { value: '7', label: '7 days' },
+              { value: '30', label: '30 days' },
+              { value: '90', label: '90 days' },
+              ...(period === 'custom' ? [{ value: 'custom' as Period, label: 'Dates' }] : []),
+            ]}
+          />
+        </div>
+        <button
+          onClick={() => setShowFilters((v) => !v)}
+          aria-expanded={showFilters}
+          className={cx(
+            'pointer-events-auto inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium backdrop-blur transition-colors',
+            showFilters || filterCount ? 'border-line-strong bg-raised/90 text-fg' : 'border-line bg-ink/80 text-dim hover:text-fg',
+          )}
+        >
+          <SlidersHorizontal className="size-4" /> Filters
+          {filterCount > 0 && <span className="tabular rounded-full bg-fg px-1.5 text-[11px] font-semibold text-ink">{filterCount}</span>}
+        </button>
+        {hasDrives && (
           <button
             onClick={() => {
               if (showDrives) closeDrive()
               setShowDrives((v) => !v)
             }}
             aria-pressed={showDrives}
-            title="Drives from the last 30 days, from car-logger"
+            title="Drives recorded by car-logger, for the same time period"
             className={cx(
               'pointer-events-auto inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium backdrop-blur transition-colors',
               showDrives ? 'border-blue/50 bg-blue/20 text-fg' : 'border-line bg-ink/80 text-dim hover:text-fg',
@@ -268,11 +334,84 @@ export default function MapPage() {
           </button>
         )}
         <span className="tabular pointer-events-auto ml-auto rounded-lg bg-ink/80 px-3 py-2 text-[13px] text-dim backdrop-blur">
-          {points.isPending ? <Spinner className="size-4" /> : `${points.data?.length.toLocaleString() ?? 0} located events`}
+          {points.isPending ? (
+            <Spinner className="size-4" />
+          ) : (
+            <>
+              {plural(points.data?.length ?? 0, 'event')}
+              {hasDrives && showDrives && <> · {plural(driveList.length, 'drive')}</>}
+            </>
+          )}
         </span>
+
+        {showFilters && (
+          <div className="rise pointer-events-auto grid w-full grid-cols-2 gap-3 rounded-2xl border border-line bg-panel/95 p-4 shadow-2xl backdrop-blur sm:max-w-3xl sm:grid-cols-3 lg:grid-cols-5">
+            <FilterSelect label="Reason" value={reason ?? ''} onChange={(v) => setFilter({ reason: v || undefined })}>
+              <option value="">Any reason</option>
+              {facets.data?.reasons.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {reasonLabel(r.value)} ({r.count})
+                </option>
+              ))}
+            </FilterSelect>
+            <FilterSelect label="City" value={city ?? ''} onChange={(v) => setFilter({ city: v || undefined })}>
+              <option value="">Anywhere</option>
+              {facets.data?.cities.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.value} ({c.count})
+                </option>
+              ))}
+            </FilterSelect>
+            <FilterSelect label="Collection" value={collection ? String(collection) : ''} onChange={(v) => setFilter({ collection: v || undefined })}>
+              <option value="">Any</option>
+              {collections.data?.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </FilterSelect>
+            <label className="block">
+              <span className="label mb-1.5 block">From</span>
+              <input
+                type="date"
+                value={customFrom ?? ''}
+                max={customTo}
+                onChange={(e) => setFilter({ period: undefined, from: e.target.value || undefined })}
+                className={inputClass}
+              />
+            </label>
+            <label className="block">
+              <span className="label mb-1.5 block">To</span>
+              <input
+                type="date"
+                value={customTo ?? ''}
+                min={customFrom}
+                onChange={(e) => setFilter({ period: undefined, to: e.target.value || undefined })}
+                className={inputClass}
+              />
+            </label>
+            <div className="col-span-full flex flex-wrap items-center justify-between gap-2 text-[12px] text-faint">
+              <span>Reason, city and collection pick events. Dates and the time period apply to drives too.</span>
+              {filterCount > 0 && (
+                <button
+                  onClick={() => setFilter({ reason: undefined, city: undefined, collection: undefined, from: undefined, to: undefined })}
+                  className="text-[13px] font-medium text-dim hover:text-fg"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      {points.isSuccess && points.data.length === 0 && (
+      {points.isSuccess && points.data.length === 0 && (filterCount > 0 || period !== 'all' || type !== 'all' || favorite) && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-6 flex justify-center">
+          <p className="rounded-lg bg-ink/85 px-4 py-2 text-sm text-dim backdrop-blur">No events match these filters.</p>
+        </div>
+      )}
+
+      {points.isSuccess && points.data.length === 0 && filterCount === 0 && period === 'all' && type === 'all' && !favorite && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-ink/70 text-center">
           <MapPinOff className="size-8 text-faint" />
           <p className="font-semibold">No located events</p>
@@ -314,5 +453,18 @@ export default function MapPage() {
         </div>
       )}
     </div>
+  )
+}
+
+const plural = (n: number, word: string) => `${n.toLocaleString()} ${word}${n === 1 ? '' : 's'}`
+
+function FilterSelect({ label, value, onChange, children }: { label: string; value: string; onChange: (value: string) => void; children: ReactNode }) {
+  return (
+    <label className="block">
+      <span className="label mb-1.5 block">{label}</span>
+      <select value={value} onChange={(e) => onChange(e.target.value)} className={inputClass}>
+        {children}
+      </select>
+    </label>
   )
 }

@@ -47,7 +47,8 @@ Your clips stay on your own computer. There is no account, no cloud and no telem
 - Hover a card to play the car's own few seconds around the trigger, on cars new enough to save them
 - Merged grid videos that play well on a phone and are easy to share, plus clip export from any range
 - Trim long Sentry events down to the minutes around the trigger
-- A clustered map of where events happened, and insights by month, hour, weekday, reason and place
+- A clustered map of where events happened, filtered by type, time period, reason, city or collection, and insights by
+  month, hour, weekday, reason and place
 - Collections, notes and favorites
 - Safe deletion through a trash folder next to your clips, restorable until it expires
 - Optional [teslausb](https://github.com/marcone/teslausb) integration: see when the car is home, follow uploads,

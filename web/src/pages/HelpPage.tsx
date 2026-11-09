@@ -9,6 +9,7 @@ const SECTIONS = [
   { id: 'library-folder', title: 'Your library folder' },
   { id: 'encryption', title: "The car's dashcam settings" },
   { id: 'watching', title: 'Watching an event' },
+  { id: 'map', title: 'The map' },
   { id: 'saving-space', title: 'Saving space' },
   { id: 'teslausb', title: 'teslausb' },
   { id: 'car-logger', title: "The car's state" },
@@ -148,6 +149,24 @@ export default function HelpPage() {
             </table>
           </Section>
 
+          <Section id="map" title="The map">
+            <p>
+              The Map page shows every event the car recorded a location for. Nearby events group into a numbered circle; click
+              it to zoom in, and where events can't be told apart (at home, say) it lists them instead.
+            </p>
+            <ul>
+              <li>Along the top, pick Sentry or Saved, only favorites, and a time period: all time, or the last 7, 30 or 90 days.</li>
+              <li>
+                Filters narrows events by reason, city or collection, or to dates of your choosing. The filters are part of the
+                page's address, so a filtered map can be bookmarked.
+              </li>
+              <li>
+                With car-logger, drives are drawn as blue lines for the same time period. Click one to see its numbers beside the
+                map; the Drives button hides them.
+              </li>
+            </ul>
+          </Section>
+
           <Section id="saving-space" title="Saving space">
             <ul>
               <li>
@@ -224,8 +243,7 @@ export default function HelpPage() {
               two weeks, with the last drive below. The Drives tab lists the last 30 days of drives. Open one to see its route
               on a map, charts of speed and power (hover over them to see where the car was at that moment), and its numbers:
               average and top speed, energy used and won back by regenerative braking, battery, stops and climb. A stop in Park
-              of under three minutes counts as part of the same drive. The same drives are drawn as blue lines on the Map page;
-              click one to see its numbers and speed beside the map, or turn them off with the Drives button. Speed and power are read about every 15 seconds, so
+              of under three minutes counts as part of the same drive. The same drives are drawn as blue lines on the Map page (see The map). Speed and power are read about every 15 seconds, so
               energy is an estimate. The Pi deletes readings once the app has them. It is experimental: we are still checking how it
               affects the car's battery while parked.
             </p>
