@@ -1,8 +1,8 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type MouseEvent, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, ArrowUpFromLine, Car, Check, Copy, ExternalLink, RefreshCw, Thermometer, Wifi, WifiOff, Zap } from 'lucide-react'
-import { api, type Archiver, type ArchiverSync } from '../api'
-import { cx, formatBytes, formatDateTime, formatDuration, formatRelative } from '../lib/format'
+import { api, type Archiver, type ArchiverLog, type ArchiverRun, type ArchiverSample, type ArchiverSync } from '../api'
+import { cx, formatBytes, formatDate, formatDateTime, formatDuration, formatRelative, formatTime } from '../lib/format'
 import { Badge, Button, Card, Field, ProgressBar, Spinner, inputClass } from '../components/ui'
 
 export const archiverQuery = { queryKey: ['archiver'], queryFn: api.archiver, refetchInterval: 15_000 } as const
@@ -58,6 +58,19 @@ export default function CarTab() {
           </p>
           {a.error && <p className="mt-1 text-sm text-warn">{a.error}</p>}
         </div>
+        {a.warnings.length > 0 && (
+          <ul className="w-full space-y-2 border-t border-line pt-4">
+            {a.warnings.map((w) => (
+              <li key={w.text} className={cx('flex items-start gap-2 text-sm', w.level === 'error' ? 'text-accent-hover' : 'text-warn')}>
+                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                <span>
+                  {w.text}
+                  {w.detail && <span className="mt-0.5 block text-[13px] text-dim">{w.detail}</span>}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           {typeof syncState === 'object' && <span className="text-[13px] text-accent-hover">{syncState.error}</span>}
           {syncState === 'sent' && <span className="text-[13px] text-ok">Upload requested</span>}
@@ -86,6 +99,12 @@ export default function CarTab() {
             <>
               <p className="text-2xl font-semibold tracking-tight">{formatRelative(lastSync.finishedAt)}</p>
               <p className="mt-1 text-[13px] text-dim">{syncSummary(lastSync)}</p>
+            </>
+          ) : a.log?.lastCopy?.startedAt ? (
+            // Without the webhook, teslausb's log still says when clips were last copied.
+            <>
+              <p className="text-2xl font-semibold tracking-tight">{formatRelative(a.log.lastCopy.finishedAt ?? a.log.lastCopy.startedAt)}</p>
+              <p className="mt-1 text-[13px] text-dim">{runSummary(a.log.lastCopy)}</p>
             </>
           ) : (
             <>
@@ -130,6 +149,13 @@ export default function CarTab() {
       </div>
 
       {status && <Health archiver={a} />}
+
+      {(a.log || a.history.length > 1) && (
+        <div className="grid gap-4 xl:grid-cols-2">
+          {a.log && <LogCard log={a.log} online={a.online} />}
+          {a.history.length > 1 && <Trends history={a.history} />}
+        </div>
+      )}
 
       <div className="grid gap-4 xl:grid-cols-2">
         <Card className="overflow-hidden">
@@ -186,6 +212,155 @@ function syncSummary(s: ArchiverSync): string {
   return parts.filter(Boolean).join(' · ') || 'No details reported'
 }
 
+function runSummary(r: ArchiverRun): string {
+  const events = r.eventFolders ? ` from ${r.eventFolders} ${r.eventFolders === 1 ? 'event' : 'events'}` : ''
+  switch (r.outcome) {
+    case 'running':
+      return r.files != null ? `Copying ${r.files} files${events}` : 'Checking for new clips'
+    case 'nothing':
+      return 'No new clips to copy'
+    case 'done':
+      return `Copied ${r.archived ?? r.files ?? 0} files${events}`
+    case 'error':
+      return `Stopped after ${r.archived ?? 0} of ${r.files ?? '?'} files`
+    case 'noArchive':
+      return "Skipped: couldn't connect to the archive share"
+  }
+}
+
+const STATE_TEXT: Record<NonNullable<ArchiverLog['state']>, string> = {
+  starting: 'Starting up',
+  waitingForArchive: 'Looking for the archive share',
+  reachable: 'Connected, waiting for the car to stop writing',
+  archiving: 'Copying clips',
+  done: 'Finished, waiting for the car to leave',
+}
+
+/** What teslausb wrote in its own log: the latest pass, and the latest one that actually copied clips. */
+function LogCard({ log, online }: { log: ArchiverLog; online: boolean }) {
+  const runs = [
+    { label: 'Latest check', run: log.lastRun },
+    // Only worth a second row when the latest check found nothing to copy.
+    ...(log.lastCopy && log.lastCopy !== log.lastRun && log.lastCopy.startedAt !== log.lastRun?.startedAt ? [{ label: 'Last copy', run: log.lastCopy }] : []),
+  ]
+  const problems = online && log.state === 'waitingForArchive' ? log.waitProblems : (log.lastRun?.problems ?? [])
+  return (
+    <Card className="p-5">
+      <h2 className="text-[15px] font-semibold">teslausb's log</h2>
+      <p className="mt-0.5 text-[13px] text-dim">
+        {online && log.state ? `${STATE_TEXT[log.state]}${log.stateSince ? ` since ${formatTime(log.stateSince)}` : ''}.` : 'As of the last visit home.'} Times are from the
+        device's own clock.
+      </p>
+      <dl className="mt-4 space-y-3">
+        {runs.map(({ label, run }) => (
+          <div key={label} className="flex items-baseline justify-between gap-3 text-sm">
+            <dt className="label shrink-0">{label}</dt>
+            <dd className="min-w-0 text-right">
+              {run ? (
+                <>
+                  <span className={cx('font-medium', run.outcome === 'error' || run.outcome === 'noArchive' ? 'text-warn' : '')}>{runSummary(run)}</span>
+                  {run.startedAt && <span className="tabular block text-[13px] text-dim">{formatDateTime(run.startedAt)}</span>}
+                </>
+              ) : (
+                <span className="text-faint">Nothing in the recent log</span>
+              )}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      {problems.length > 0 && (
+        <ul className="mt-4 space-y-1 border-t border-line pt-3 font-mono text-[12px] text-dim">
+          {problems.map((p) => (
+            <li key={p} className="break-words">
+              {p}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  )
+}
+
+// Visits home are drawn side by side with the time away left out; otherwise a few hours home a day would be slivers.
+const VISIT_GAP = 6
+
+const TRENDS: { label: string; value: (s: ArchiverSample) => number | null; format: (v: number) => string; domain: (lo: number, hi: number) => [number, number] }[] = [
+  { label: 'Temperature', value: (s) => s.cpuTempC, format: (v) => `${v.toFixed(0)} °C`, domain: (lo, hi) => [Math.min(lo, 40) - 2, Math.max(hi, 70) + 2] },
+  { label: 'Supply', value: (s) => s.supplyVolts, format: (v) => `${v.toFixed(2)} V`, domain: (lo, hi) => [Math.min(lo, 4.7), Math.max(hi, 5.2)] },
+  { label: 'Wi-Fi', value: (s) => s.wifiStrength, format: (v) => `${Math.round(v * 100)}%`, domain: () => [0, 1] },
+]
+
+/** Two weeks of health readings as three small line charts that share one hover position. */
+function Trends({ history }: { history: ArchiverSample[] }) {
+  const [hover, setHover] = useState<number | null>(null)
+  const xs: number[] = []
+  let x = 0
+  history.forEach((s, i) => {
+    if (i > 0) x += s.sessionId === history[i - 1].sessionId ? 1 : VISIT_GAP
+    xs.push(x)
+  })
+  const width = Math.max(1, x)
+  const visits = new Set(history.map((s) => s.sessionId)).size
+  const shown = hover ?? history.length - 1
+
+  function onMove(e: MouseEvent<HTMLDivElement>) {
+    const box = e.currentTarget.getBoundingClientRect()
+    const target = ((e.clientX - box.left) / box.width) * width
+    let best = 0
+    for (let i = 1; i < xs.length; i++) if (Math.abs(xs[i] - target) < Math.abs(xs[best] - target)) best = i
+    setHover(best)
+  }
+
+  return (
+    <Card className="p-5">
+      <h2 className="text-[15px] font-semibold">Trends</h2>
+      <p className="mt-0.5 text-[13px] text-dim">
+        {visits} {visits === 1 ? 'visit' : 'visits'} home in the last two weeks, side by side. Time away is left out.
+      </p>
+      <div className="relative mt-4 space-y-4" onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
+        {TRENDS.map((t) => {
+          const values = history.map(t.value)
+          const known = values.filter((v): v is number => v != null)
+          if (known.length === 0) return null
+          const [lo, hi] = t.domain(Math.min(...known), Math.max(...known))
+          let d = ''
+          values.forEach((v, i) => {
+            if (v == null) return
+            const joined = i > 0 && values[i - 1] != null && history[i].sessionId === history[i - 1].sessionId
+            const point = `${(xs[i] / width) * 100} ${100 - ((v - lo) / (hi - lo)) * 100}`
+            // A zero-length segment at each start draws a dot, so a visit with a single reading still shows.
+            d += joined ? `L${point}` : `M${point}L${point}`
+          })
+          const current = values[shown]
+          return (
+            <div key={t.label}>
+              <div className="mb-1 flex items-baseline justify-between text-[13px]">
+                <span className="label">{t.label}</span>
+                <span className="tabular">
+                  <span className="font-semibold text-fg">{current != null ? t.format(current) : '–'}</span>
+                  <span className="ml-2 text-faint">
+                    {t.format(Math.min(...known))} – {t.format(Math.max(...known))}
+                  </span>
+                </span>
+              </div>
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-14 w-full overflow-visible rounded bg-raised/50" role="img" aria-label={`${t.label} over recent visits`}>
+                <path d={d} fill="none" stroke="var(--color-blue)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+              </svg>
+            </div>
+          )
+        })}
+        {hover != null && (
+          <div className="pointer-events-none absolute inset-y-0 w-px bg-line-strong" style={{ left: `${(xs[hover] / width) * 100}%` }} />
+        )}
+      </div>
+      <div className="tabular mt-2 flex justify-between text-[12px] text-faint">
+        <span>{formatDate(history[0].at)}</span>
+        <span className={cx(hover != null && 'text-fg')}>{formatDateTime(history[shown].at)}</span>
+      </div>
+    </Card>
+  )
+}
+
 function Tile({ label, children }: { label: string; children: ReactNode }) {
   return (
     <Card className="p-5">
@@ -202,8 +377,11 @@ function Health({ archiver }: { archiver: Archiver }) {
   const problems: { text: string; now: boolean }[] = []
   if (flags & 0x1) problems.push({ text: 'Not getting enough power right now', now: true })
   else if (flags & 0x10000) problems.push({ text: 'Power dipped too low at some point since it started', now: false })
-  if (flags & 0x4) problems.push({ text: 'Slowed down by heat right now', now: true })
-  else if (flags & 0x40000) problems.push({ text: 'Was slowed down by heat at some point since it started', now: false })
+  // Throttling (0x4) can come from low power or heat; the soft temperature limit (0x8) is the heat-only flag.
+  if (flags & 0x8) problems.push({ text: 'Slowed down by heat right now', now: true })
+  else if (flags & 0x80000) problems.push({ text: 'Was slowed down by heat at some point since it started', now: false })
+  else if (flags & 0x4) problems.push({ text: 'Running slowed down right now to protect itself', now: true })
+  else if (flags & 0x40000) problems.push({ text: 'Slowed itself down at some point since it started', now: false })
   const hot = s.cpuTempC != null && s.cpuTempC >= 80
 
   return (

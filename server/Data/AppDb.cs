@@ -13,6 +13,7 @@ public class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
     public DbSet<Setting> Settings => Set<Setting>();
     public DbSet<ArchiverSession> ArchiverSessions => Set<ArchiverSession>();
     public DbSet<ArchiverSync> ArchiverSyncs => Set<ArchiverSync>();
+    public DbSet<ArchiverSample> ArchiverSamples => Set<ArchiverSample>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -48,5 +49,6 @@ public class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
             e.HasOne(x => x.Event).WithMany(x => x.Collections).HasForeignKey(x => x.EventId).OnDelete(DeleteBehavior.Cascade);
         });
         b.Entity<Setting>(e => e.HasKey(x => x.Key));
+        b.Entity<ArchiverSample>(e => e.HasIndex(x => x.At));
     }
 }

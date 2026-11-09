@@ -91,6 +91,7 @@ been run on Windows 11. Here is what has and has not been tried.
 | Importing in a browser, and from a drive in the desktop app | Works                                          |
 | The car's own event clip on hover                           | Works                                          |
 | teslausb status, upload notifications and "Upload now"      | Works                                          |
+| teslausb log reading, health trends and warnings            | Built; tried against one teslausb install      |
 | Desktop app on Windows                                      | Works                                          |
 | NVIDIA and AMD hardware encoding (Windows)                  | Works                                          |
 | Cleaning up Sentry events recorded at home                  | Built and tested; new                          |
@@ -276,7 +277,12 @@ drive, and copies new clips to a shared folder whenever the car is on your home 
 
 1. Turn on **Admin → Settings → teslausb**. A Car tab appears in Admin.
 2. In **Admin → Car**, enter the address of the teslausb web page (for example `http://teslausb.local`). The
-   app polls its status report every 30 seconds; whenever it answers, the car is on the home network.
+   app polls its status report every 30 seconds; whenever it answers, the car is on the home network. While
+   the car is home, the app also keeps a health reading every 5 minutes (temperature, supply voltage, Wi-Fi; 90
+   days of history, the last two weeks shown as trends) and reads the end of teslausb's `archiveloop.log`
+   every couple of minutes. That shows teslausb's latest check and its last copy even without the webhook.
+   The Car tab warns when the car is home but teslausb can't reach the archive share, when an upload stopped
+   partway, and when the power dipped during most recent visits.
 3. Copy the two lines shown there into `teslausb_setup_variables.conf` and re-run teslausb's setup:
 
    ```bash
