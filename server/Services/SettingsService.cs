@@ -45,6 +45,11 @@ public record AppSettings
     /// installs from before the switch existed; those count as using it when an address is filled in.
     /// </summary>
     public bool? TeslausbEnabled { get; init; }
+    /// <summary>
+    /// The token car-logger on the teslausb Pi printed when installed. With it, the app collects the car's
+    /// state from the Pi (port 8722 on the teslausb address) whenever the car is home.
+    /// </summary>
+    public string? CarLoggerToken { get; init; }
 
     public AppSettings Sanitized() => this with
     {
@@ -69,6 +74,7 @@ public record AppSettings
         WebhookUrl = string.IsNullOrWhiteSpace(WebhookUrl) ? null : WebhookUrl.Trim(),
         ArchiverUrl = NormalizeUrl(ArchiverUrl),
         TeslausbEnabled = TeslausbEnabled ?? NormalizeUrl(ArchiverUrl) != null,
+        CarLoggerToken = string.IsNullOrWhiteSpace(CarLoggerToken) ? null : CarLoggerToken.Trim(),
     };
 
     /// <summary>Accepts "teslausb.local" as well as a full URL; returns null when it is not a usable http address.</summary>

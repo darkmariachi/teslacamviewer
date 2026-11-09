@@ -2,6 +2,7 @@ import { useState, type MouseEvent, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, ArrowUpFromLine, Car, Check, Copy, ExternalLink, RefreshCw, Thermometer, Wifi, WifiOff, Zap } from 'lucide-react'
 import { api, type Archiver, type ArchiverLog, type ArchiverRun, type ArchiverSample, type ArchiverSync } from '../api'
+import CarState from './CarState'
 import { cx, formatBytes, formatDate, formatDateTime, formatDuration, formatRelative, formatTime } from '../lib/format'
 import { Badge, Button, Card, Field, ProgressBar, Spinner, inputClass } from '../components/ui'
 
@@ -41,6 +42,8 @@ export default function CarTab() {
 
   return (
     <div className="space-y-4">
+      <CarState onSetUp={() => setEditing(true)} />
+
       <Card className="flex flex-wrap items-center gap-4 p-5">
         <div className={cx('flex size-12 shrink-0 items-center justify-center rounded-full', a.online ? 'bg-ok/15 text-ok' : 'bg-raised text-dim')}>
           {a.online ? <Wifi className="size-6" /> : <WifiOff className="size-6" />}
@@ -425,6 +428,7 @@ function Reading({ icon, label, value, warn }: { icon: ReactNode; label: string;
 
 function Setup({ archiver, onDone, canCancel }: { archiver: Archiver; onDone: () => void; canCancel: boolean }) {
   const [url, setUrl] = useState(archiver.url ?? '')
+  const [token, setToken] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -436,7 +440,7 @@ function Setup({ archiver, onDone, canCancel }: { archiver: Archiver; onDone: ()
     setError(null)
     try {
       const current = await api.settings()
-      const saved = await api.saveSettings({ ...current, archiverUrl: url.trim() || null })
+      const saved = await api.saveSettings({ ...current, archiverUrl: url.trim() || null, carLoggerToken: token?.trim() ? token.trim() : current.carLoggerToken })
       if (url.trim() && !saved.archiverUrl) throw new Error("That doesn't look like an address. Try something like http://teslausb.local")
       await api.archiverPoll().catch(() => {})
       onDone()
@@ -482,6 +486,26 @@ function Setup({ archiver, onDone, canCancel }: { archiver: Archiver; onDone: ()
           <p className="text-xs text-faint">
             The address must be one the car can reach from your Wi-Fi. If you opened this page through a public domain, swap in the server's local address.
           </p>
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <h2 className="text-[15px] font-semibold">3. Car state (optional)</h2>
+        <p className="mt-1 text-sm text-dim">
+          If car-logger runs on the teslausb Pi, paste the token it created (<code className="rounded bg-raised px-1 py-0.5 text-[13px]">/mutable/tesla/sync-token</code>
+          ). The app then collects the car's battery, charging, locks and tire pressures whenever the car is home.
+        </p>
+        <div className="mt-4">
+          <Field label="car-logger token" hint="Leave empty to keep the current one.">
+            <input
+              value={token ?? ''}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder={archiver.configured ? 'Unchanged' : ''}
+              className={cx(inputClass, 'font-mono')}
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </Field>
         </div>
       </Card>
 

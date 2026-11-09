@@ -119,3 +119,41 @@ export const cameraShort = (camera: string) => CAMERAS_SHORT[camera] ?? camera
 export function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(' ')
 }
+
+// The car reports miles, bar and °C. People in the US expect miles, psi and °F; everyone else gets metric.
+const imperial = typeof navigator !== 'undefined' && /-(US|LR|MM)\b/i.test(navigator.language)
+
+export function formatDistance(miles: number): string {
+  return imperial ? `${Math.round(miles).toLocaleString()} mi` : `${Math.round(miles * 1.609344).toLocaleString()} km`
+}
+
+/** Like formatDistance, with a decimal for the short distances of a drive around town. */
+export function formatTripDistance(miles: number): string {
+  const value = imperial ? miles : miles * 1.609344
+  return `${value < 100 ? value.toFixed(1) : Math.round(value).toLocaleString()} ${imperial ? 'mi' : 'km'}`
+}
+
+export function formatHeight(metres: number): string {
+  return imperial ? `${Math.round(metres * 3.28084).toLocaleString()} ft` : `${Math.round(metres).toLocaleString()} m`
+}
+
+/** Energy per distance, as the car shows it: Wh/mi in the US, Wh/km elsewhere. */
+export function formatEfficiency(whPerMile: number): string {
+  return imperial ? `${Math.round(whPerMile)} Wh/mi` : `${Math.round(whPerMile / 1.609344)} Wh/km`
+}
+
+/** Speed for chart labels and readouts, in the same unit as formatSpeed. */
+export const speedValue = (mph: number) => (imperial ? mph : mph * 1.609344)
+export const speedUnit = imperial ? 'mph' : 'km/h'
+
+export function formatSpeed(mph: number): string {
+  return imperial ? `${Math.round(mph)} mph` : `${Math.round(mph * 1.609344)} km/h`
+}
+
+export function formatPressure(bar: number): string {
+  return imperial ? `${Math.round(bar * 14.5038)} psi` : `${bar.toFixed(1)} bar`
+}
+
+export function formatTemperature(celsius: number): string {
+  return imperial ? `${Math.round(celsius * 1.8 + 32)} °F` : `${Math.round(celsius)} °C`
+}

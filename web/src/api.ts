@@ -151,6 +151,7 @@ export interface Settings {
   archiverUrl: string | null
   /** Clips arrive through teslausb: shows the Car tab and polls the device. */
   teslausbEnabled: boolean
+  carLoggerToken: string | null
 }
 
 export interface ArchiverStatus {
@@ -177,6 +178,72 @@ export interface ArchiverSync {
   filesPlanned: number | null
   eventsPlanned: number | null
   filesArchived: number | null
+}
+
+/** The car's state from car-logger on the teslausb Pi. Times are UTC; distances in miles, pressures in bar. */
+export interface CarNow {
+  battery: { at: string | null; level: number | null; rangeMiles: number | null; charging: string | null; limit: number | null; chargerPowerKw: number | null; rateMph: number | null; energyAddedKwh: number | null; portOpen: boolean | null } | null
+  closures: { at: string | null; locked: boolean | null; sentry: string | null; userPresent: boolean | null; open: string[] } | null
+  climate: { at: string | null; insideC: number | null; outsideC: number | null; climateOn: boolean | null } | null
+  tires: { at: string | null; frontLeft: number | null; frontRight: number | null; rearLeft: number | null; rearRight: number | null; warnings: string[] } | null
+  software: { at: string | null; status: string | null; version: string | null } | null
+  drive: { at: string | null; odometerMiles: number | null; gear: string | null; speedMph: number | null } | null
+  body: { at: string | null; locked: boolean; asleep: boolean; userPresent: boolean } | null
+}
+
+export interface CarStatus {
+  configured: boolean
+  url: string | null
+  /** Whether the Pi (and so car-logger) is on the home network right now. */
+  home: boolean
+  lastHome: string | null
+  lastSync: string | null
+  error: string | null
+  readings: number
+  lastReading: string | null
+  now: CarNow | null
+  battery: { at: string; level: number; rangeMiles: number | null }[]
+}
+
+/** A drive pieced together from car-logger's readings. Times are UTC; the route is [longitude, latitude] pairs. */
+export interface CarDriveSummary {
+  /** The start time in Unix milliseconds. */
+  id: number
+  start: string
+  end: string
+  miles: number | null
+  batteryStart: number | null
+  batteryEnd: number | null
+  maxSpeedMph: number | null
+  avgSpeedMph: number | null
+  /** Net energy from the battery, adding up the car's power readings; regen is already taken off. */
+  energyKwh: number | null
+  from: string | null
+  to: string | null
+  route: [number, number][]
+}
+
+export interface CarDriveDetail {
+  summary: CarDriveSummary
+  stats: {
+    durationSeconds: number
+    movingSeconds: number
+    stops: number
+    avgSpeedMph: number | null
+    /** Average while the wheels were turning, leaving out lights and traffic. */
+    movingSpeedMph: number | null
+    maxSpeedMph: number | null
+    energyKwh: number | null
+    regenKwh: number | null
+    whPerMile: number | null
+    climbM: number | null
+    descentM: number | null
+    outsideC: number | null
+    maxPowerKw: number | null
+  }
+  /** About every 15 seconds; power is negative while regenerative braking. */
+  samples: { at: string; speedMph: number | null; powerKw: number | null }[]
+  points: { at: string; lon: number; lat: number; elevationM: number | null }[]
 }
 
 /** One pass of teslausb's archive loop, read from its log. Times are the Pi's own clock, with no zone. */
@@ -511,7 +578,17 @@ export const api = {
   archiver: () => request<Archiver>('GET', '/api/archiver'),
   archiverSync: () => request<void>('POST', '/api/archiver/sync'),
   archiverPoll: () => request<void>('POST', '/api/archiver/poll'),
+  car: () => request<CarStatus>('GET', '/api/car'),
+  carSync: () => request<{ added: number }>('POST', '/api/car/sync'),
+  carDrives: (days = 30) => request<CarDriveSummary[]>('GET', `/api/car/drives?days=${days}`),
+  carDrive: (id: number) => request<CarDriveDetail>('GET', `/api/car/drives/${id}`),
 }
+
+/** The car's state from car-logger; shared so the sidebar and the Car page use one cache entry. */
+export const carQuery = { queryKey: ['car'], queryFn: () => api.car(), refetchInterval: 30_000 } as const
+
+/** The last month of drives, for the Drives tab and the Car page's last-drive card. */
+export const drivesQuery = { queryKey: ['car', 'drives'], queryFn: () => api.carDrives(30) } as const
 
 export const thumbUrl = (eventId: number) => `/api/media/thumb/${eventId}`
 export const eventClipUrl = (eventId: number) => `/api/media/eventclip/${eventId}`

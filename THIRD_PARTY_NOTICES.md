@@ -38,6 +38,20 @@ Debian (https://packages.debian.org/source/stable/ffmpeg).
 | [Lucide](https://lucide.dev) icons | ISC |
 | [Inter](https://rsms.me/inter/) typeface | SIL Open Font License 1.1 |
 
+## Included in car-logger (the optional program for the teslausb Pi)
+
+| Component | Licence |
+| --- | --- |
+| [Tesla vehicle-command](https://github.com/teslamotors/vehicle-command) | Apache 2.0 |
+| [go-ble](https://github.com/go-ble/ble) | BSD 3-Clause |
+| [Protocol Buffers for Go](https://github.com/protocolbuffers/protobuf-go) | BSD 3-Clause |
+| [golang.org/x/sys](https://pkg.go.dev/golang.org/x/sys) | BSD 3-Clause |
+| [saferith](https://github.com/cronokirby/saferith) | MIT |
+| [golang-jwt](https://github.com/golang-jwt/jwt) | MIT |
+| [go-colorable](https://github.com/mattn/go-colorable), [go-isatty](https://github.com/mattn/go-isatty) | MIT |
+| [logxi](https://github.com/mgutz/logxi), [ansi](https://github.com/mgutz/ansi) | MIT |
+| [pkg/errors](https://github.com/pkg/errors) | BSD 2-Clause |
+
 ## Map data
 
 Map tiles are loaded from [OpenFreeMap](https://openfreemap.org), using the [OpenMapTiles](https://openmaptiles.org)

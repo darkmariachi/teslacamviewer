@@ -11,6 +11,7 @@ const SECTIONS = [
   { id: 'watching', title: 'Watching an event' },
   { id: 'saving-space', title: 'Saving space' },
   { id: 'teslausb', title: 'teslausb' },
+  { id: 'car-logger', title: "The car's state" },
   { id: 'phone', title: 'Using it from a phone' },
   { id: 'privacy', title: 'Privacy' },
   { id: 'troubleshooting', title: 'Troubleshooting' },
@@ -200,6 +201,36 @@ export default function HelpPage() {
             </p>
           </Section>
 
+          <Section id="car-logger" title="The car's state">
+            <p>
+              car-logger is an optional program for the teslausb Pi. It reads the car's state over Bluetooth with a key you pair to
+              the car, the way a phone key works, so it needs no Tesla account or paid service. It records the battery, charging,
+              locks, doors and windows, cabin temperature, tire pressures and, while driving, where the car goes.
+            </p>
+            <ol>
+              <li>
+                Set it up on the Pi and pair its key with your key card. The steps are in <Code>car-logger/README.md</Code> in the
+                project on GitHub.
+              </li>
+              <li>
+                At the top of Admin → Car, choose Add the token, and paste the token car-logger created (<Code>/mutable/tesla/sync-token</Code>
+                on the Pi).
+              </li>
+            </ol>
+            <p>
+              Whenever the car is home, the app collects the new readings from the Pi, and a Car page appears in the menu: a
+              drawing of the car with each tire's pressure (low ones marked), open doors, windows, trunk and frunk, the lock and
+              Sentry, then the battery and charging, cabin temperature, odometer, software updates and the battery over the last
+              two weeks, with the last drive below. The Drives tab lists the last 30 days of drives. Open one to see its route
+              on a map, charts of speed and power (hover over them to see where the car was at that moment), and its numbers:
+              average and top speed, energy used and won back by regenerative braking, battery, stops and climb. A stop in Park
+              of under three minutes counts as part of the same drive. The same drives are drawn as blue lines on the Map page;
+              click one to see its numbers and speed beside the map, or turn them off with the Drives button. Speed and power are read about every 15 seconds, so
+              energy is an estimate. The Pi deletes readings once the app has them. It is experimental: we are still checking how it
+              affects the car's battery while parked.
+            </p>
+          </Section>
+
           <Section id="phone" title="Using it from a phone">
             {desktop ? (
               <p>
@@ -233,6 +264,7 @@ export default function HelpPage() {
               {desktop && <li>The app asks GitHub whether a newer version exists, and downloads it if so.</li>}
               <li>If you set a webhook, new Sentry events are announced to the address you entered.</li>
               <li>If you use teslausb, the app talks to it on your home network.</li>
+              <li>If you set up car-logger, the app stores the car's readings, including where it has driven, in its own database.</li>
             </ul>
           </Section>
 

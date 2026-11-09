@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { BarChart3, CircleHelp, FolderHeart, Map as MapIcon, Settings2, Video } from 'lucide-react'
-import { authQuery, UNAUTHORIZED_EVENT } from './api'
+import { BarChart3, Car, CircleHelp, FolderHeart, Map as MapIcon, Settings2, Video } from 'lucide-react'
+import { authQuery, carQuery, UNAUTHORIZED_EVENT } from './api'
 import { cx } from './lib/format'
 import { Spinner } from './components/ui'
 import { TitleBar } from './components/TitleBar'
@@ -16,14 +16,19 @@ import CollectionPage from './pages/CollectionPage'
 import InsightsPage from './pages/InsightsPage'
 import AdminPage from './pages/AdminPage'
 import HelpPage from './pages/HelpPage'
+import CarPage from './pages/CarPage'
+import DrivesPage from './pages/DrivesPage'
+import DrivePage from './pages/DrivePage'
 
 const NAV = [
   { to: '/', label: 'Events', icon: Video, end: true },
+  // Only once car-logger is set up and has sent something; see Shell.
+  { to: '/car', label: 'Car', icon: Car, needsCar: true },
   { to: '/map', label: 'Map', icon: MapIcon },
   { to: '/collections', label: 'Collections', icon: FolderHeart },
   { to: '/insights', label: 'Insights', icon: BarChart3 },
   { to: '/admin', label: 'Admin', icon: Settings2 },
-  // Phones have no room for a sixth tab; Help is linked from Admin there.
+  // Phones have no room for every tab; Help is linked from Admin there.
   { to: '/help', label: 'Help', icon: CircleHelp, desktopOnly: true },
 ]
 
@@ -75,6 +80,9 @@ export default function App() {
         <Route path="/collections" element={<CollectionsPage />} />
         <Route path="/collections/:id" element={<CollectionPage />} />
         <Route path="/insights" element={<InsightsPage />} />
+        <Route path="/car" element={<CarPage />} />
+        <Route path="/car/drives" element={<DrivesPage />} />
+        <Route path="/car/drives/:id" element={<DrivePage />} />
         <Route path="/admin/*" element={<AdminPage />} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -105,6 +113,9 @@ function Logo() {
 /** Sidebar on desktop, bottom tab bar on phones. */
 function Shell({ children, banner }: { children: React.ReactNode; banner?: React.ReactNode }) {
   const location = useLocation()
+  const car = useQuery({ ...carQuery, refetchInterval: 5 * 60_000 })
+  const hasCar = car.data?.configured === true && car.data.readings > 0
+  const nav = NAV.filter((n) => !n.needsCar || hasCar)
   // The map fills the screen; everything else gets normal page padding.
   const flush = location.pathname === '/map'
 
@@ -116,7 +127,7 @@ function Shell({ children, banner }: { children: React.ReactNode; banner?: React
           <Logo />
         </NavLink>
         <nav className="mt-9 flex flex-col gap-1">
-          {NAV.map(({ to, label, icon: Icon, end }) => (
+          {nav.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
@@ -147,7 +158,7 @@ function Shell({ children, banner }: { children: React.ReactNode; banner?: React
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-line bg-ink/90 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
-        {NAV.filter((n) => !n.desktopOnly).map(({ to, label, icon: Icon, end }) => (
+        {nav.filter((n) => !n.desktopOnly).map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}

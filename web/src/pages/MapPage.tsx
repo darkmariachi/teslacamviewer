@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { MapPinOff, Star, X } from 'lucide-react'
-import type { GeoJSONSource, Map as MapLibreMap } from 'maplibre-gl'
-import { api, thumbUrl, type EventType, type MapPoint } from '../api'
+import { MapPinOff, Route, Star, X } from 'lucide-react'
+import type { GeoJSONSource, Map as MapLibreMap, Marker } from 'maplibre-gl'
+import { api, drivesQuery, thumbUrl, type EventType, type MapPoint } from '../api'
+import { DrivePane } from '../components/DrivePane'
 import { MAP_STYLE, loadMapLibre } from '../lib/map'
 import { cx, eventTitle, formatDateTime } from '../lib/format'
 import { Segmented, Spinner } from '../components/ui'
@@ -18,6 +19,9 @@ export default function MapPage() {
   const [favorite, setFavorite] = useState(false)
   const [picked, setPicked] = useState<MapPoint[] | null>(null)
   const [ready, setReady] = useState(false)
+  const [showDrives, setShowDrives] = useState(true)
+  const [drive, setDrive] = useState<number | null>(null)
+  const cursor = useRef<Marker | null>(null)
 
   const node = useRef<HTMLDivElement>(null)
   const map = useRef<MapLibreMap | null>(null)
@@ -30,6 +34,9 @@ export default function MapPage() {
   const byId = useMemo(() => new Map((points.data ?? []).map((p) => [p.id, p])), [points.data])
   const byIdRef = useRef(byId)
   byIdRef.current = byId
+  // Drives come from car-logger; without it the query just comes back empty and nothing is drawn.
+  const drives = useQuery({ ...drivesQuery, retry: false })
+  const driveList = useMemo(() => drives.data ?? [], [drives.data])
 
   useEffect(() => {
     let cancelled = false
@@ -39,6 +46,16 @@ export default function MapPage() {
       m.addControl(new maplibre.NavigationControl({ showCompass: false }), 'bottom-right')
       map.current = m
       m.on('load', () => {
+        // Drives go in first so the event markers stay on top of them.
+        m.addSource('drives', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+        const lineLayout = { 'line-join': 'round', 'line-cap': 'round' } as const
+        const none = ['==', ['get', 'id'], -1] as ['==', ['get', string], number]
+        m.addLayer({ id: 'drives', type: 'line', source: 'drives', layout: lineLayout, paint: { 'line-color': '#3e6ae1', 'line-width': 3, 'line-opacity': 0.55 } })
+        m.addLayer({ id: 'drive-hover', type: 'line', source: 'drives', layout: lineLayout, filter: none, paint: { 'line-color': '#7b9bff', 'line-width': 5 } })
+        m.addLayer({ id: 'drive-picked-casing', type: 'line', source: 'drives', layout: lineLayout, filter: none, paint: { 'line-color': '#0a0a0b', 'line-width': 10, 'line-opacity': 0.8 } })
+        m.addLayer({ id: 'drive-picked', type: 'line', source: 'drives', layout: lineLayout, filter: none, paint: { 'line-color': '#5b85ff', 'line-width': 5 } })
+        // A wide invisible line makes a thin route easy to hover and click.
+        m.addLayer({ id: 'drives-hit', type: 'line', source: 'drives', layout: lineLayout, paint: { 'line-color': '#000000', 'line-width': 16, 'line-opacity': 0 } })
         m.addSource('events', { type: 'geojson', data: { type: 'FeatureCollection', features: [] }, cluster: true, clusterRadius: 46, clusterMaxZoom: 17 })
         m.addLayer({
           id: 'clusters',
@@ -85,6 +102,7 @@ export default function MapPage() {
           if (zoom > 17 || m.getZoom() >= 16.5) {
             const leaves = await source.getClusterLeaves(clusterId, 500, 0)
             const list = leaves.map((l) => byIdRef.current.get(l.properties!.id as number)).filter((p): p is MapPoint => !!p)
+            setDrive(null)
             setPicked(list.sort((a, b) => b.startTime.localeCompare(a.startTime)))
           } else {
             m.easeTo({ center, zoom: zoom + 0.5 })
@@ -92,9 +110,24 @@ export default function MapPage() {
         })
         m.on('click', 'points', (e) => {
           const point = byIdRef.current.get(e.features?.[0]?.properties.id as number)
-          if (point) setPicked([point])
+          if (point) {
+            setDrive(null)
+            setPicked([point])
+          }
         })
-        for (const layer of ['clusters', 'points']) {
+        m.on('mousemove', 'drives-hit', (e) => {
+          m.setFilter('drive-hover', ['==', ['get', 'id'], (e.features?.[0]?.properties.id as number) ?? -1])
+        })
+        m.on('mouseleave', 'drives-hit', () => m.setFilter('drive-hover', ['==', ['get', 'id'], -1]))
+        m.on('click', 'drives-hit', (e) => {
+          // An event marker over the line wins; it has its own click.
+          if (m.queryRenderedFeatures(e.point, { layers: ['clusters', 'points'] }).length) return
+          const id = e.features?.[0]?.properties.id as number | undefined
+          if (id == null) return
+          setPicked(null)
+          setDrive(id)
+        })
+        for (const layer of ['clusters', 'points', 'drives-hit']) {
           m.on('mouseenter', layer, () => (m.getCanvas().style.cursor = 'pointer'))
           m.on('mouseleave', layer, () => (m.getCanvas().style.cursor = ''))
         }
@@ -133,6 +166,64 @@ export default function MapPage() {
     m.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { padding: 70, maxZoom: 14, duration: 0 })
   }, [ready, points.data, byId, focusId])
 
+  useEffect(() => {
+    const m = map.current
+    if (!ready || !m) return
+    ;(m.getSource('drives') as GeoJSONSource).setData({
+      type: 'FeatureCollection',
+      features: (showDrives ? driveList : [])
+        .filter((d) => d.route.length > 1)
+        .map((d) => ({ type: 'Feature', geometry: { type: 'LineString', coordinates: d.route }, properties: { id: d.id } })),
+    })
+  }, [ready, driveList, showDrives])
+
+  // The picked drive stands out, and the map moves to show all of it.
+  useEffect(() => {
+    const m = map.current
+    if (!ready || !m) return
+    const filter = ['==', ['get', 'id'], drive ?? -1] as ['==', ['get', string], number]
+    m.setFilter('drive-picked', filter)
+    m.setFilter('drive-picked-casing', filter)
+    const route = driveList.find((d) => d.id === drive)?.route
+    if (!route?.length) return
+    const lons = route.map((p) => p[0])
+    const lats = route.map((p) => p[1])
+    // Leave room on the right for the pane on wide screens, and at the bottom on phones.
+    const wide = window.matchMedia('(min-width: 640px)').matches
+    m.fitBounds(
+      [
+        [Math.min(...lons), Math.min(...lats)],
+        [Math.max(...lons), Math.max(...lats)],
+      ],
+      { padding: wide ? { top: 90, bottom: 60, left: 60, right: 430 } : { top: 80, bottom: 380, left: 40, right: 40 }, maxZoom: 15 },
+    )
+  }, [ready, drive, driveList])
+
+  function showCursor(lonLat: [number, number] | null) {
+    const m = map.current
+    if (!m) return
+    if (!lonLat) {
+      cursor.current?.remove()
+      cursor.current = null
+      return
+    }
+    if (cursor.current) {
+      cursor.current.setLngLat(lonLat)
+      return
+    }
+    loadMapLibre().then((maplibre) => {
+      const dot = Object.assign(document.createElement('div'), {
+        className: 'size-3.5 rounded-full border-2 border-ink bg-fg shadow-[0_0_0_5px_rgb(245_245_247/0.25)]',
+      })
+      cursor.current = new maplibre.Marker({ element: dot }).setLngLat(lonLat).addTo(m)
+    })
+  }
+
+  function closeDrive() {
+    showCursor(null)
+    setDrive(null)
+  }
+
   return (
     <div className="relative h-[calc(100dvh-7rem-env(safe-area-inset-bottom)-var(--tb))] lg:h-[calc(100dvh-var(--tb))]">
       {/* Sized explicitly: MapLibre sets position: relative on its container, which would collapse an inset-0 box. */}
@@ -160,6 +251,22 @@ export default function MapPage() {
         >
           <Star className="size-4" fill={favorite ? 'currentColor' : 'none'} /> Favorites
         </button>
+        {driveList.length > 0 && (
+          <button
+            onClick={() => {
+              if (showDrives) closeDrive()
+              setShowDrives((v) => !v)
+            }}
+            aria-pressed={showDrives}
+            title="Drives from the last 30 days, from car-logger"
+            className={cx(
+              'pointer-events-auto inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium backdrop-blur transition-colors',
+              showDrives ? 'border-blue/50 bg-blue/20 text-fg' : 'border-line bg-ink/80 text-dim hover:text-fg',
+            )}
+          >
+            <Route className="size-4" /> Drives
+          </button>
+        )}
         <span className="tabular pointer-events-auto ml-auto rounded-lg bg-ink/80 px-3 py-2 text-[13px] text-dim backdrop-blur">
           {points.isPending ? <Spinner className="size-4" /> : `${points.data?.length.toLocaleString() ?? 0} located events`}
         </span>
@@ -172,6 +279,8 @@ export default function MapPage() {
           <p className="max-w-xs text-sm text-dim">Events show up here when the car recorded a location with them.</p>
         </div>
       )}
+
+      {drive != null && <DrivePane key={drive} id={drive} onClose={closeDrive} onHover={showCursor} />}
 
       {picked && (
         <div className="rise absolute inset-x-3 bottom-3 z-10 max-h-[55%] overflow-hidden rounded-2xl border border-line bg-panel/95 shadow-2xl backdrop-blur sm:inset-x-auto sm:top-20 sm:right-4 sm:bottom-auto sm:max-h-[calc(100%-7rem)] sm:w-80">

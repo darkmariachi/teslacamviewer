@@ -152,6 +152,24 @@ public class ArchiverSession
     public string? LastLogJson { get; set; }
 }
 
+/// <summary>One reading of the car's state, collected from car-logger on the teslausb Pi.</summary>
+public class CarReading
+{
+    public int Id { get; set; }
+    /// <summary>body, drive, location, charge, climate, closures, tires or software.</summary>
+    public string Kind { get; set; } = "";
+    /// <summary>The car's own time for the reading (UTC), or an estimate when <see cref="CarTimeEstimated"/>.</summary>
+    public DateTime? CarTime { get; set; }
+    public bool CarTimeEstimated { get; set; }
+    /// <summary>The Pi's clock, which is wrong away from home Wi-Fi; kept for diagnosing.</summary>
+    public DateTime PiTime { get; set; }
+    public string Mode { get; set; } = "";
+    /// <summary>The car's report as car-logger wrote it (protobuf JSON).</summary>
+    public string Data { get; set; } = "";
+    /// <summary>Where it came from in the Pi's log, "log id/file:line", so a repeated page can't add it twice.</summary>
+    public string Source { get; set; } = "";
+}
+
 /// <summary>A reading of the archiver's health, kept every few minutes while it is home so trends show up.</summary>
 public class ArchiverSample
 {
