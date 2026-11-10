@@ -4,7 +4,7 @@ import { MAP_STYLE, loadMapLibre } from '../lib/map'
 
 type Route = [number, number][]
 
-/** A drive's route as a line on the map, with a dot where it started and a ring where it ended. */
+/** A drive's route as a line on the map, with a dot where it started and a ring where it ended; either can be clicked. */
 export function RouteMap({ route, marker, className }: { route: Route; marker?: [number, number] | null; className?: string }) {
   const node = useRef<HTMLDivElement>(null)
   const map = useRef<MapLibreMap | null>(null)
@@ -62,10 +62,16 @@ export function RouteMap({ route, marker, className }: { route: Route; marker?: 
     markers.current = []
     if (route.length === 0) return
     loadMapLibre().then((maplibre) => {
-      const dot = (className: string) => Object.assign(document.createElement('div'), { className })
+      const dot = (className: string) => Object.assign(document.createElement('div'), { className: `${className} cursor-pointer` })
+      // Clicking either end opens a small card that can hand the spot over to Google Maps, e.g. for directions.
+      const end = (className: string, at: [number, number], title: string) =>
+        new maplibre.Marker({ element: dot(className) })
+          .setLngLat(at)
+          .setPopup(new maplibre.Popup({ offset: 12, closeButton: false, maxWidth: '240px' }).setDOMContent(endCard(title, at)))
+          .addTo(m)
       markers.current = [
-        new maplibre.Marker({ element: dot('size-3.5 rounded-full border-2 border-white bg-blue') }).setLngLat(route[0]).addTo(m),
-        new maplibre.Marker({ element: dot('size-4 rounded-full border-[3px] border-white bg-ink') }).setLngLat(route[route.length - 1]).addTo(m),
+        end('size-3.5 rounded-full border-2 border-white bg-blue', route[0], 'Start of the drive'),
+        end('size-4 rounded-full border-[3px] border-white bg-ink', route[route.length - 1], 'End of the drive'),
       ]
       const lons = route.map((p) => p[0])
       const lats = route.map((p) => p[1])
@@ -80,6 +86,22 @@ export function RouteMap({ route, marker, className }: { route: Route; marker?: 
   }, [ready, route])
 
   return <div ref={node} className={className} />
+}
+
+/** The popup for a drive's start or end: what it is, and a link that opens the spot in Google Maps. */
+function endCard(title: string, [lon, lat]: [number, number]) {
+  const card = Object.assign(document.createElement('div'), { className: 'px-3.5 py-3 text-sm' })
+  card.append(
+    Object.assign(document.createElement('p'), { className: 'font-semibold text-fg', textContent: title }),
+    Object.assign(document.createElement('a'), {
+      href: `https://www.google.com/maps/search/?api=1&query=${lat.toFixed(6)},${lon.toFixed(6)}`,
+      target: '_blank',
+      rel: 'noreferrer',
+      className: 'mt-1 inline-block text-[13px] text-accent-hover hover:underline',
+      textContent: 'Open in Google Maps ↗',
+    }),
+  )
+  return card
 }
 
 function line(route: Route) {
