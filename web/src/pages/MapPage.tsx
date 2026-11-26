@@ -5,11 +5,14 @@ import { MapPinOff, Route, SlidersHorizontal, Star, X } from 'lucide-react'
 import type { GeoJSONSource, Map as MapLibreMap, Marker } from 'maplibre-gl'
 import { api, thumbUrl, type EventType, type MapPoint } from '../api'
 import { DrivePane } from '../components/DrivePane'
-import { MAP_STYLE, loadMapLibre } from '../lib/map'
+import { loadMapLibre, mapStyle } from '../lib/map'
+import { resolvedTheme } from '../lib/prefs'
 import { cx, eventTitle, formatDateTime, reasonLabel } from '../lib/format'
 import { Segmented, Spinner, inputClass } from '../components/ui'
 
-const TYPE_COLOR: Record<EventType, string> = { sentry: '#e82127', saved: '#f5f5f7', recent: '#3e6ae1' }
+// Saved events are drawn in the text colour, so they flip with the theme.
+const typeColors = (): Record<EventType, string> =>
+  resolvedTheme() === 'light' ? { sentry: '#d81b21', saved: '#3a3a41', recent: '#2f5bd3' } : { sentry: '#e82127', saved: '#f5f5f7', recent: '#3e6ae1' }
 
 type Period = 'all' | '7' | '30' | '90' | 'custom'
 
@@ -52,6 +55,13 @@ export default function MapPage() {
       api.mapPoints({ type: type === 'all' ? undefined : type, favorite: favorite || undefined, reason, city, collection, from, to }),
     placeholderData: (previous) => previous,
   })
+  // Routes the clips themselves recorded (recent firmware), drawn under the markers with the same filters.
+  const routes = useQuery({
+    queryKey: ['map-routes', type, favorite, reason, city, collection, from, to],
+    queryFn: () =>
+      api.eventRoutes({ type: type === 'all' ? undefined : type, favorite: favorite || undefined, reason, city, collection, from, to }),
+    placeholderData: (previous) => previous,
+  })
   const facets = useQuery({ queryKey: ['facets'], queryFn: api.facets })
   const collections = useQuery({ queryKey: ['collections'], queryFn: api.collections })
   const byId = useMemo(() => new Map((points.data ?? []).map((p) => [p.id, p])), [points.data])
@@ -84,20 +94,25 @@ export default function MapPage() {
     let cancelled = false
     loadMapLibre().then((maplibre) => {
       if (cancelled || !node.current) return
-      const m = new maplibre.Map({ container: node.current, style: MAP_STYLE, center: [-98, 38], zoom: 3, attributionControl: { compact: true } })
+      const m = new maplibre.Map({ container: node.current, style: mapStyle(), center: [-98, 38], zoom: 3, attributionControl: { compact: true } })
       m.addControl(new maplibre.NavigationControl({ showCompass: false }), 'bottom-right')
       map.current = m
       m.on('load', () => {
+        const TYPE_COLOR = typeColors()
+        const edge = resolvedTheme() === 'light' ? '#ffffff' : '#0a0a0b'
         // Drives go in first so the event markers stay on top of them.
         m.addSource('drives', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
         const lineLayout = { 'line-join': 'round', 'line-cap': 'round' } as const
         const none = ['==', ['get', 'id'], -1] as ['==', ['get', string], number]
         m.addLayer({ id: 'drives', type: 'line', source: 'drives', layout: lineLayout, paint: { 'line-color': '#3e6ae1', 'line-width': 3, 'line-opacity': 0.55 } })
         m.addLayer({ id: 'drive-hover', type: 'line', source: 'drives', layout: lineLayout, filter: none, paint: { 'line-color': '#7b9bff', 'line-width': 5 } })
-        m.addLayer({ id: 'drive-picked-casing', type: 'line', source: 'drives', layout: lineLayout, filter: none, paint: { 'line-color': '#0a0a0b', 'line-width': 10, 'line-opacity': 0.8 } })
+        m.addLayer({ id: 'drive-picked-casing', type: 'line', source: 'drives', layout: lineLayout, filter: none, paint: { 'line-color': edge, 'line-width': 10, 'line-opacity': 0.8 } })
         m.addLayer({ id: 'drive-picked', type: 'line', source: 'drives', layout: lineLayout, filter: none, paint: { 'line-color': '#5b85ff', 'line-width': 5 } })
         // A wide invisible line makes a thin route easy to hover and click.
         m.addLayer({ id: 'drives-hit', type: 'line', source: 'drives', layout: lineLayout, paint: { 'line-color': '#000000', 'line-width': 16, 'line-opacity': 0 } })
+        m.addSource('routes', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+        m.addLayer({ id: 'routes', type: 'line', source: 'routes', layout: lineLayout, paint: { 'line-color': ['match', ['get', 'type'], 'sentry', TYPE_COLOR.sentry, 'saved', TYPE_COLOR.saved, TYPE_COLOR.recent], 'line-width': 3.5, 'line-opacity': 0.75 } })
+        m.addLayer({ id: 'routes-hit', type: 'line', source: 'routes', layout: lineLayout, paint: { 'line-color': '#000000', 'line-width': 16, 'line-opacity': 0 } })
         m.addSource('events', { type: 'geojson', data: { type: 'FeatureCollection', features: [] }, cluster: true, clusterRadius: 46, clusterMaxZoom: 17 })
         m.addLayer({
           id: 'clusters',
@@ -129,7 +144,7 @@ export default function MapPage() {
             'circle-color': ['match', ['get', 'type'], 'sentry', TYPE_COLOR.sentry, 'saved', TYPE_COLOR.saved, TYPE_COLOR.recent],
             'circle-radius': 7,
             'circle-stroke-width': 2,
-            'circle-stroke-color': '#0a0a0b',
+            'circle-stroke-color': edge,
           },
         })
 
@@ -169,7 +184,15 @@ export default function MapPage() {
           setPicked(null)
           setDrive(id)
         })
-        for (const layer of ['clusters', 'points', 'drives-hit']) {
+        m.on('click', 'routes-hit', (e) => {
+          if (m.queryRenderedFeatures(e.point, { layers: ['clusters', 'points'] }).length) return
+          const point = byIdRef.current.get(e.features?.[0]?.properties.id as number)
+          if (point) {
+            setDrive(null)
+            setPicked([point])
+          }
+        })
+        for (const layer of ['clusters', 'points', 'drives-hit', 'routes-hit']) {
           m.on('mouseenter', layer, () => (m.getCanvas().style.cursor = 'pointer'))
           m.on('mouseleave', layer, () => (m.getCanvas().style.cursor = ''))
         }
@@ -218,6 +241,15 @@ export default function MapPage() {
         .map((d) => ({ type: 'Feature', geometry: { type: 'LineString', coordinates: d.route }, properties: { id: d.id } })),
     })
   }, [ready, driveList, showDrives])
+
+  useEffect(() => {
+    const m = map.current
+    if (!ready || !m) return
+    ;(m.getSource('routes') as GeoJSONSource).setData({
+      type: 'FeatureCollection',
+      features: (routes.data ?? []).map((r) => ({ type: 'Feature', geometry: { type: 'LineString', coordinates: r.points }, properties: { id: r.id, type: r.type } })),
+    })
+  }, [ready, routes.data])
 
   // The picked drive stands out, and the map moves to show all of it.
   useEffect(() => {
@@ -440,7 +472,7 @@ export default function MapPage() {
                   </div>
                   <div className="min-w-0">
                     <p className="flex items-center gap-1.5 truncate text-sm font-medium">
-                      <span className="size-2 shrink-0 rounded-full" style={{ background: TYPE_COLOR[p.type] }} />
+                      <span className="size-2 shrink-0 rounded-full" style={{ background: typeColors()[p.type] }} />
                       {eventTitle(p)}
                       {p.favorite && <Star className="size-3 shrink-0 text-warn" fill="currentColor" />}
                     </p>

@@ -71,6 +71,28 @@ public static class EventsApi
             }));
         });
 
+        // Routes recorded in the clips' own drive data, for lines on the map.
+        group.MapGet("/routes", async (AppDb db, string? type, bool? favorite, int? collection, string? reason, string? city,
+            DateOnly? from, DateOnly? to, string? q) =>
+        {
+            var routes = await Filter(db, type, favorite, collection, reason, city, from, to, q, null)
+                .Join(db.EventTracks, e => e.Id, t => t.EventId, (e, t) => new { e.Id, e.Type, e.StartTime, e.City, e.EndCity, t.Points })
+                .OrderByDescending(e => e.StartTime)
+                .ToListAsync();
+            return Results.Ok(routes.Select(r => new
+            {
+                r.Id, type = r.Type.ToString().ToLowerInvariant(), r.StartTime, r.City, r.EndCity,
+                points = JsonSerializer.Deserialize<double[][]>(r.Points),
+            }));
+        });
+
+        // The car's driving data for each segment, for the player's HUD.
+        group.MapGet("/{id:int}/drive", (int id, AppPaths paths) =>
+        {
+            var file = paths.DriveData(id);
+            return File.Exists(file) ? Results.File(file, "application/json") : Results.NotFound();
+        });
+
         group.MapGet("/{id:int}", async (int id, AppDb db, JobQueue queue, SettingsService settings) =>
         {
             var ev = await db.Events.AsNoTracking()

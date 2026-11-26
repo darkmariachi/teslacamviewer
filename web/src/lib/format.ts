@@ -88,6 +88,12 @@ export function reasonLabel(reason: string | null | undefined): string | null {
   return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
+/** Where an event happened; a drive that ends somewhere else reads as start → end. */
+export function placeOf(e: Pick<EventSummary, 'city' | 'endCity'>): string | null {
+  if (e.city && e.endCity && e.city !== e.endCity) return `${e.city} → ${e.endCity}`
+  return e.city ?? e.endCity
+}
+
 export const TYPE_LABEL: Record<EventType, string> = { sentry: 'Sentry', saved: 'Saved', recent: 'Drive' }
 
 export function eventTitle(e: Pick<EventSummary, 'type' | 'reason'>): string {

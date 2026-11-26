@@ -32,9 +32,12 @@ public class MediaProcessor(IDbContextFactory<AppDb> dbf, AppPaths paths, Ffmpeg
         await using var db = await dbf.CreateDbContextAsync(ct);
         var ev = await LoadAsync(db, eventId, ct);
         var files = ev.Segments.SelectMany(s => s.Files).ToList();
+        // Events probed before drive data was read only need that part.
+        var toProbe = ev.Probed ? files.Where(f => f.Codec == null).ToList() : files;
+        var steps = toProbe.Count + (ev.DriveDataVersion < EventDriveData.Version ? 1 : 0);
         var done = 0;
         // A few files at a time: each probe mostly waits on the disk.
-        await Parallel.ForEachAsync(files, new ParallelOptions { MaxDegreeOfParallelism = 3, CancellationToken = ct }, async (file, token) =>
+        await Parallel.ForEachAsync(toProbe, new ParallelOptions { MaxDegreeOfParallelism = 3, CancellationToken = ct }, async (file, token) =>
         {
             var result = await ffmpeg.ProbeAsync(paths.ClipPath(ev, file), token);
             if (result != null)
@@ -44,8 +47,13 @@ public class MediaProcessor(IDbContextFactory<AppDb> dbf, AppPaths paths, Ffmpeg
                 file.Height = result.Height;
                 file.DurationSec = result.DurationSec;
             }
-            progress?.Invoke(Interlocked.Increment(ref done) / (double)files.Count);
+            progress?.Invoke(Interlocked.Increment(ref done) / (double)Math.Max(1, steps));
         });
+        if (ev.DriveDataVersion < EventDriveData.Version)
+        {
+            await EventDriveData.ApplyAsync(db, ev, paths, ct);
+            progress?.Invoke(1);
+        }
         foreach (var seg in ev.Segments)
         {
             var longest = seg.Files.Max(f => f.DurationSec ?? 0);

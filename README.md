@@ -43,6 +43,8 @@ Your clips stay on your own computer. There is no account, no cloud and no telem
 
 - Every Sentry event, saved clip and drive as a card with a thumbnail, reason, place and time
 - One timeline per event instead of one-minute files, with every camera playing in sync and the trigger marked
+- The car's own driving data over the video (speed, gear, pedals, steering, turn signals, Autopilot, heading and
+  g-force) for clips recorded on recent Tesla software, with the route on a map that follows playback
 - Import from the car's USB drive, skipping what you already have, and optionally clear the drive afterwards
 - Hover a card to play the car's own few seconds around the trigger, on cars new enough to save them
 - Merged grid videos that play well on a phone and are easy to share, plus clip export from any range
@@ -54,6 +56,7 @@ Your clips stay on your own computer. There is no account, no cloud and no telem
 - Optional [teslausb](https://github.com/marcone/teslausb) integration: see when the car is home, follow uploads,
   and clean up Sentry events recorded at home
 - Hardware encoding on NVIDIA, AMD, Intel and Apple graphics, with a software fallback
+- Dark and light themes, or follow the system
 - A built-in guide (Help) for everything below
 
 ## Screenshots
@@ -102,6 +105,8 @@ been run on Windows 11. Here is what has and has not been tried.
 | HEVC clips                                                  | Built; not yet tried with real HEVC footage    |
 | macOS                                                       | Not yet: needs Apple code signing              |
 | car-logger (car state over Bluetooth, on the teslausb Pi)   | Experimental; tried on one car, two drives    |
+| Driving data HUD, drive routes and places from the clips    | New; tried with one 2023 Model Y's clips       |
+| Light theme                                                 | New                                            |
 
 If you try one of the rows that is not marked "Works", an issue saying how it went is very welcome.
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { MAP_STYLE, loadMapLibre } from '../lib/map'
+import { loadMapLibre, mapStyle } from '../lib/map'
 
 /** A small, non-interactive map with a single pin. */
 export function MiniMap({ lat, lon, className }: { lat: number; lon: number; className?: string }) {
@@ -12,7 +12,7 @@ export function MiniMap({ lat, lon, className }: { lat: number; lon: number; cla
       if (cancelled || !node.current) return
       map = new maplibre.Map({
         container: node.current,
-        style: MAP_STYLE,
+        style: mapStyle(),
         center: [lon, lat],
         zoom: 13.5,
         interactive: false,

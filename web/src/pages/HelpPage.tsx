@@ -10,6 +10,7 @@ const SECTIONS = [
   { id: 'encryption', title: "The car's dashcam settings" },
   { id: 'watching', title: 'Watching an event' },
   { id: 'map', title: 'The map' },
+  { id: 'appearance', title: 'Light theme and units' },
   { id: 'saving-space', title: 'Saving space' },
   { id: 'teslausb', title: 'teslausb' },
   { id: 'car-logger', title: "The car's state" },
@@ -129,6 +130,18 @@ export default function HelpPage() {
               <li>The red mark on the timeline is the moment the car was triggered, and playback starts just before it.</li>
               <li>Hovering an event card plays the car's own few seconds around the trigger, when the car saved them.</li>
               <li>The scissors select a range to export, from one camera or as a grid, or to keep while the rest goes to the trash.</li>
+              <li>
+                <strong>Driving data.</strong> Recent Tesla software writes the car's speed, gear, accelerator and brake, steering,
+                turn signals, Autopilot, heading and position into every frame it records while the car is on. When an event has
+                it, the video shows it along the bottom and the gauge button (or H) hides it. The ring on the right is the
+                g-force: the dot moves up when the car speeds up, down when it brakes, and sideways in turns. Footage recorded
+                while parked, and clips from older software, have none.
+              </li>
+              <li>
+                Drives and other events with driving data also get their route on the event's map, with a dot that follows
+                the car as the video plays. Drives have no event.json, so they take their start and end from it, and borrow
+                the place name of the nearest event that has one.
+              </li>
             </ul>
             <table className="mt-3 w-full text-left text-[13px]">
               <tbody className="divide-y divide-line">
@@ -138,6 +151,7 @@ export default function HelpPage() {
                   ['1 – 6', 'Choose a camera'],
                   ['G', 'Merged view'],
                   ['T', 'Jump to the trigger'],
+                  ['H', 'Show or hide the driving data'],
                   ['F', 'Full screen'],
                 ].map(([key, action]) => (
                   <tr key={key}>
@@ -164,7 +178,20 @@ export default function HelpPage() {
                 With car-logger, drives are drawn as blue lines for the same time period. Click one to see its numbers beside the
                 map; the Drives button hides them.
               </li>
+              <li>
+                Events whose clips carry driving data are drawn as their route, in the event's colour (blue for drives). Click
+                one to open it.
+              </li>
             </ul>
+          </Section>
+
+          <Section id="appearance" title="Light theme and units">
+            <p>
+              Admin → Settings → <strong>Appearance</strong> switches between a dark and a light theme, or follows
+              {desktop ? ' your computer' : ' the device'} (the default). It also sets whether speeds are shown in mph or km/h,
+              and whether driving data is shown over the video. These choices apply at once and are kept
+              {desktop ? ' in this app' : ' in this browser'}, so a phone and a computer can each have their own.
+            </p>
           </Section>
 
           <Section id="saving-space" title="Saving space">

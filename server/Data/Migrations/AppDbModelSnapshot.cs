@@ -244,13 +244,28 @@ namespace TeslaCam.Data.Migrations
                     b.Property<string>("City")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("DriveDataVersion")
+                        .HasColumnType("INTEGER");
+
                     b.Property<double>("DurationSec")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("EndCity")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("EndLat")
+                        .HasColumnType("REAL");
+
+                    b.Property<double?>("EndLon")
                         .HasColumnType("REAL");
 
                     b.Property<DateTime>("EndTime")
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("Favorite")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("HasDriveData")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("HasEventClip")
@@ -344,6 +359,20 @@ namespace TeslaCam.Data.Migrations
                     b.HasIndex("Type", "Name", "RelPath");
 
                     b.ToTable("Events");
+                });
+
+            modelBuilder.Entity("TeslaCam.Data.EventTrack", b =>
+                {
+                    b.Property<int>("EventId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Points")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("EventId");
+
+                    b.ToTable("EventTracks");
                 });
 
             modelBuilder.Entity("TeslaCam.Data.Job", b =>
@@ -470,6 +499,17 @@ namespace TeslaCam.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Collection");
+
+                    b.Navigation("Event");
+                });
+
+            modelBuilder.Entity("TeslaCam.Data.EventTrack", b =>
+                {
+                    b.HasOne("TeslaCam.Data.Event", "Event")
+                        .WithOne()
+                        .HasForeignKey("TeslaCam.Data.EventTrack", "EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Event");
                 });

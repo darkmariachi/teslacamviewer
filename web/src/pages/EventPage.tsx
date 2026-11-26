@@ -1,20 +1,36 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle, ArrowLeft, ChevronLeft, ChevronRight, Download, ExternalLink, FolderPlus, LayoutGrid, MapPin, MoreHorizontal,
   House, RefreshCw, Scissors, Star, Trash2, X,
 } from 'lucide-react'
-import { api, type EventDetail, type Job } from '../api'
+import { api, type DriveData, type EventDetail, type Job } from '../api'
 import {
-  cameraLabel, cameraShort, cx, eventTitle, formatBytes, formatClock, formatDay, formatDuration, formatTime, TYPE_LABEL,
+  cameraLabel, cameraShort, cx, eventTitle, formatBytes, formatClock, formatDay, formatDuration, formatTime, placeOf, TYPE_LABEL,
 } from '../lib/format'
 import { Badge, Button, Card, ConfirmDialog, EmptyState, IconButton, Menu, MenuItem, ProgressBar, Spinner, inputClass } from '../components/ui'
 import { Player } from '../components/Player'
 import { MiniMap } from '../components/MiniMap'
+import { RouteMap } from '../components/RouteMap'
+import { momentAt, routeOf } from '../lib/drive'
 import { CollectionPicker } from '../components/CollectionPicker'
 
 const isActive = (job?: Job) => job?.status === 'queued' || job?.status === 'running'
+
+/** Where the car was at a point on the event's timeline, as [lon, lat], from its drive data. */
+function carAt(detail: EventDetail, drive: DriveData | undefined, seconds: number): [number, number] | null {
+  if (!drive) return null
+  let start = 0
+  for (const s of detail.segments) {
+    if (seconds < start + s.durationSec || s === detail.segments[detail.segments.length - 1]) {
+      const m = momentAt(drive, s.index, seconds - start)
+      return m?.lat != null && m.lon != null ? [m.lon, m.lat] : null
+    }
+    start += s.durationSec
+  }
+  return null
+}
 
 export default function EventPage() {
   const id = Number(useParams().id)
@@ -33,6 +49,23 @@ export default function EventPage() {
     refetchInterval: (q) => (q.state.data && [...q.state.data.jobs, ...q.state.data.exports].some(isActive) ? 1500 : false),
   })
   const detail = query.data
+  const drive = useQuery({
+    queryKey: ['drive', id],
+    queryFn: () => api.driveData(id),
+    enabled: detail?.summary.hasDriveData === true,
+    staleTime: Infinity,
+    retry: false,
+  })
+  const route = useMemo(() => routeOf(drive.data), [drive.data])
+
+  // Where playback is, a few times a second, so the map can follow the car without redrawing the page every frame.
+  const [position, setPosition] = useState(0)
+  const lastPosition = useRef(0)
+  const onPosition = useCallback((seconds: number) => {
+    if (Math.abs(seconds - lastPosition.current) < 0.25) return
+    lastPosition.current = seconds
+    setPosition(seconds)
+  }, [])
 
   useEffect(() => {
     setRange(null)
@@ -56,6 +89,8 @@ export default function EventPage() {
   }
 
   const { summary } = detail
+  const marker = carAt(detail, drive.data, position)
+  const place = placeOf(summary)
   const job = (kind: Job['kind']) => detail.jobs.find((j) => j.kind === kind)
   const previewJob = job('preview')
   const transcodeJob = job('transcode')
@@ -106,6 +141,8 @@ export default function EventPage() {
             onGeneratePreview={() => run(() => api.process(id, 'preview'))}
             range={range}
             onRangeChange={setRange}
+            onPosition={onPosition}
+            drive={drive.data}
           />
 
           {unplayable.length > 0 && (
@@ -309,11 +346,15 @@ export default function EventPage() {
 
           {summary.lat != null && summary.lon != null && (
             <Card className="overflow-hidden">
-              <MiniMap lat={summary.lat} lon={summary.lon} className="h-44 w-full" />
+              {route.length >= 2 ? (
+                <RouteMap route={route} marker={marker} className="h-56 w-full" />
+              ) : (
+                <MiniMap lat={summary.lat} lon={summary.lon} className="h-44 w-full" />
+              )}
               <div className="flex items-center justify-between gap-3 px-4 py-3">
                 <p className="flex min-w-0 items-center gap-1.5 text-sm">
                   <MapPin className="size-4 shrink-0 text-accent-hover" />
-                  <span className="truncate">{summary.city ?? 'Unknown place'}</span>
+                  <span className="truncate">{place ?? 'Unknown place'}</span>
                 </p>
                 <div className="flex shrink-0 gap-3 text-[13px] text-dim">
                   <Link to={`/map?focus=${id}`} className="hover:text-fg">

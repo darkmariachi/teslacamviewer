@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { AlertTriangle, Crosshair, LayoutGrid, Maximize, Minimize, Pause, Play, RotateCcw, RotateCw, Scissors, VideoOff } from 'lucide-react'
-import type { EventDetail, Job } from '../api'
+import { AlertTriangle, Crosshair, Gauge, LayoutGrid, Maximize, Minimize, Pause, Play, RotateCcw, RotateCw, Scissors, VideoOff } from 'lucide-react'
+import type { DriveData, EventDetail, Job } from '../api'
+import { momentAt } from '../lib/drive'
+import { setPref, usePrefs } from '../lib/prefs'
+import { DriveHud } from './DriveHud'
 import { cameraLabel, cameraShort, cx, formatClock, formatTime, parseLocal } from '../lib/format'
 import { Button, Menu, MenuItem, ProgressBar, Segmented } from './ui'
 
@@ -18,13 +21,16 @@ interface Props {
   range: [number, number] | null
   onRangeChange: (range: [number, number] | null) => void
   onPosition?: (seconds: number) => void
+  /** The car's driving data, when the clips carry it, for the HUD. */
+  drive?: DriveData
 }
 
 /**
  * Plays an event as one continuous timeline. In camera mode every camera has its own video element,
  * kept in step with the main one; in grid mode a single pre-merged video is used instead.
  */
-export function Player({ detail, previewJob, onGeneratePreview, range, onRangeChange, onPosition }: Props) {
+export function Player({ detail, previewJob, onGeneratePreview, range, onRangeChange, onPosition, drive }: Props) {
+  const prefs = usePrefs()
   const { segments, summary, preview } = detail
   const cameras = summary.cameras
   const offsets = useMemo(() => {
@@ -233,6 +239,7 @@ export function Player({ detail, previewJob, onGeneratePreview, range, onRangeCh
       else if (e.key === 'ArrowRight') seek(positionRef.current + (e.shiftKey ? 1 : 5))
       else if (e.key === 'f') toggleFullscreen()
       else if (e.key === 'g') changeMode(mode === 'grid' ? 'cams' : 'grid')
+      else if (e.key === 'h' && drive) setPref('hud', !prefs.hud)
       else if (e.key === 't' && detail.triggerOffsetSec != null) seek(Math.max(0, detail.triggerOffsetSec - 3))
       else if (/^[1-6]$/.test(e.key) && cameras[Number(e.key) - 1]) {
         setMain(cameras[Number(e.key) - 1])
@@ -242,13 +249,15 @@ export function Player({ detail, previewJob, onGeneratePreview, range, onRangeCh
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toggle, seek, toggleFullscreen, mode, cameras, detail.triggerOffsetSec])
+  }, [toggle, seek, toggleFullscreen, mode, cameras, detail.triggerOffsetSec, drive, prefs.hud])
 
   const current = locate(position)
   const wallClock = new Date(parseLocal(segments[current.index].startTime).getTime() + current.local * 1000)
   const others = cameras.filter((c) => c !== main)
   const wide = others.length > 3
   const gridLayout = preview ? parseLayout(preview.layout) : null
+  const moment = drive && prefs.hud ? momentAt(drive, current.index, current.local) : null
+  const hud = moment && <DriveHud moment={moment} unit={prefs.speedUnit} compact={!fullscreen && others.length > 0 && typeof window !== 'undefined' && window.innerWidth < 640} />
 
   return (
     <div ref={container} className={cx('flex flex-col bg-black', fullscreen ? 'h-full' : 'overflow-hidden rounded-card border border-line')}>
@@ -313,6 +322,7 @@ export function Player({ detail, previewJob, onGeneratePreview, range, onRangeCh
                     {isMain ? cameraLabel(camera) : cameraShort(camera)}
                     {camera === detail.triggerCamera && <span className="ml-1.5 text-accent-hover">●</span>}
                   </span>
+                  {isMain && hud && <div className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center sm:bottom-3">{hud}</div>}
                   {!isMain && <span className="pointer-events-none absolute inset-0 ring-1 ring-white/0 transition-all ring-inset group-hover/tile:ring-white/60" />}
                 </div>
               )
@@ -365,6 +375,7 @@ export function Player({ detail, previewJob, onGeneratePreview, range, onRangeCh
                 </button>
               ))}
             </div>
+            {hud && <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">{hud}</div>}
           </div>
         ) : (
           <div className="flex aspect-video w-full flex-col items-center justify-center gap-4 px-6 text-center">
@@ -428,6 +439,11 @@ export function Player({ detail, previewJob, onGeneratePreview, range, onRangeCh
             {detail.triggerOffsetSec != null && (
               <ControlButton label="Jump to the trigger (T)" onClick={() => seek(Math.max(0, detail.triggerOffsetSec! - 3))}>
                 <Crosshair className="size-[18px] text-accent-hover" />
+              </ControlButton>
+            )}
+            {drive && (
+              <ControlButton label={prefs.hud ? 'Hide driving data (H)' : 'Show driving data (H)'} active={prefs.hud} onClick={() => setPref('hud', !prefs.hud)}>
+                <Gauge className="size-[18px]" />
               </ControlButton>
             )}
             <ControlButton

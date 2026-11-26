@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Check, LayoutGrid, MapPin, Star, StickyNote, Video } from 'lucide-react'
 import { eventClipUrl, thumbUrl, type EventSummary } from '../api'
-import { cx, eventTitle, formatClock, formatTime, TYPE_LABEL } from '../lib/format'
+import { cx, eventTitle, formatClock, formatTime, TYPE_LABEL, placeOf } from '../lib/format'
 
 interface Props {
   event: EventSummary
@@ -81,11 +81,11 @@ export function EventCard({ event, selecting, selected, onToggleSelect, onToggle
           <p className="truncate text-sm font-semibold">{eventTitle(event)}</p>
           <p className="tabular mt-0.5 flex items-center gap-1.5 truncate text-[13px] text-dim">
             {formatTime(when)}
-            {event.city && (
+            {placeOf(event) && (
               <>
                 <span className="text-faint">·</span>
                 <MapPin className="size-3 shrink-0" />
-                <span className="truncate">{event.city}</span>
+                <span className="truncate">{placeOf(event)}</span>
               </>
             )}
           </p>

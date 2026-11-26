@@ -1,5 +1,9 @@
+import { resolvedTheme } from './prefs'
+
+/** OpenFreeMap's style matching the app's theme, read when a map is created. */
+export const mapStyle = () => `https://tiles.openfreemap.org/styles/${resolvedTheme() === 'light' ? 'positron' : 'dark'}`
+
 // MapLibre is large, so it is loaded only when a map is actually shown.
-export const MAP_STYLE = 'https://tiles.openfreemap.org/styles/dark'
 
 let loading: Promise<typeof import('maplibre-gl')> | undefined
 

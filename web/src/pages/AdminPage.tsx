@@ -10,6 +10,7 @@ import {
   Badge, Button, Card, ConfirmDialog, EmptyState, Field, IconButton, PageHeader, ProgressBar, Segmented, Spinner, Toggle, inputClass,
 } from '../components/ui'
 import CarTab from './CarTab'
+import { setPref, usePrefs } from '../lib/prefs'
 import { ChooseLibraryFolder } from '../components/Library'
 
 type Tab = 'processing' | 'car' | 'library' | 'settings' | 'trash' | 'account'
@@ -516,6 +517,7 @@ function SettingsForm() {
 
   return (
     <div className="max-w-3xl space-y-4">
+      <Appearance />
       <Section title="Merged videos" description="One video with every camera in a grid. Lighter to play on a phone and easy to share.">
         <Field label="Create them automatically for">
           <select value={draft.previewPolicy} onChange={(e) => set({ previewPolicy: e.target.value as Settings['previewPolicy'] })} className={inputClass}>
@@ -687,6 +689,39 @@ function HomeCleanupPreview({ draft }: { draft: Settings }) {
         </>
       )}
     </p>
+  )
+}
+
+/** Choices kept in this browser rather than on the server, so each device can have its own; they apply at once. */
+function Appearance() {
+  const prefs = usePrefs()
+  return (
+    <Section title="Appearance" description="These apply right away and are kept on this device only.">
+      <Field label="Theme">
+        <Segmented
+          value={prefs.theme}
+          onChange={(theme) => setPref('theme', theme)}
+          options={[
+            { value: 'system', label: 'Match the system' },
+            { value: 'dark', label: 'Dark' },
+            { value: 'light', label: 'Light' },
+          ]}
+        />
+      </Field>
+      <Field label="Speed in">
+        <Segmented
+          value={prefs.speedUnit}
+          onChange={(unit) => setPref('speedUnit', unit)}
+          options={[
+            { value: 'mph', label: 'mph' },
+            { value: 'kmh', label: 'km/h' },
+          ]}
+        />
+      </Field>
+      <Row label="Show driving data over the video" hint="Speed, gear, pedals, steering, turn signals and g-force, from clips that carry them (recent car software, while driving). Press H in the player to switch it.">
+        <Toggle checked={prefs.hud} onChange={(on) => setPref('hud', on)} label="Show driving data over the video" />
+      </Row>
+    </Section>
   )
 }
 
