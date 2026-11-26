@@ -4,9 +4,11 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 import App from './App'
+import { applyTheme } from './lib/prefs'
 
 // The desktop app draws its own title bar; make room for it.
 if (window.teslacamDesktop) document.documentElement.classList.add('desktop-app')
+applyTheme()
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 15_000, retry: 1, refetchOnWindowFocus: false } },

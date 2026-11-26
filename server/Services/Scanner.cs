@@ -175,6 +175,14 @@ public partial class Scanner(IDbContextFactory<AppDb> dbf, AppPaths paths, JobQu
             }
             await db.SaveChangesAsync(ct);
 
+            // Events indexed before drive data was read (or before its format changed) get it from a probe.
+            var probing = db.Jobs.Where(j => j.Kind == JobKind.Probe && (j.Status == JobStatus.Queued || j.Status == JobStatus.Running))
+                .Select(j => j.EventId);
+            var unread = await db.Events.Where(e => e.TrashedAt == null && e.DriveDataVersion < EventDriveData.Version && !probing.Contains(e.Id))
+                .ToListAsync(ct);
+            foreach (var e in unread) db.Jobs.Add(JobQueue.NewJob(e, JobKind.Probe));
+            if (unread.Count > 0) await db.SaveChangesAsync(ct);
+
             // If the share is not mounted nothing is found; never treat that as "everything was deleted".
             if (anyTypeDir)
             {
@@ -316,6 +324,8 @@ public partial class Scanner(IDbContextFactory<AppDb> dbf, AppPaths paths, JobQu
         ev.Lat = ev.Lon = ev.ReasonValue = null;
         ev.MetaVersion = CurrentMetaVersion;
         if (eventJsonPath != null) ReadEventJson(ev, eventJsonPath);
+        // The place may come from the clips' drive data instead (drives have no event.json); read it again.
+        ev.DriveDataVersion = 0;
     }
 
     private static void ReadEventJson(Event ev, string path)

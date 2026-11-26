@@ -15,6 +15,7 @@ public class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
     public DbSet<ArchiverSync> ArchiverSyncs => Set<ArchiverSync>();
     public DbSet<ArchiverSample> ArchiverSamples => Set<ArchiverSample>();
     public DbSet<CarReading> CarReadings => Set<CarReading>();
+    public DbSet<EventTrack> EventTracks => Set<EventTrack>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -48,6 +49,11 @@ public class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
             e.HasKey(x => new { x.CollectionId, x.EventId });
             e.HasOne(x => x.Collection).WithMany(x => x.Events).HasForeignKey(x => x.CollectionId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.Event).WithMany(x => x.Collections).HasForeignKey(x => x.EventId).OnDelete(DeleteBehavior.Cascade);
+        });
+        b.Entity<EventTrack>(e =>
+        {
+            e.HasKey(x => x.EventId);
+            e.HasOne(x => x.Event).WithOne().HasForeignKey<EventTrack>(x => x.EventId).OnDelete(DeleteBehavior.Cascade);
         });
         b.Entity<Setting>(e => e.HasKey(x => x.Key));
         b.Entity<ArchiverSample>(e => e.HasIndex(x => x.At));

@@ -9,6 +9,16 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>TeslaCam</title>
+    <script>
+      // Apply the saved theme before anything draws, so a light page never flashes dark (see src/lib/prefs.ts).
+      try {
+        var t = JSON.parse(localStorage.getItem('teslacam.prefs') || '{}').theme
+        if (t === 'light' || (t !== 'dark' && matchMedia('(prefers-color-scheme: light)').matches)) {
+          document.documentElement.classList.add('light')
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f4f4f6')
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

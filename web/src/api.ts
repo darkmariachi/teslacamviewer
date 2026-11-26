@@ -15,6 +15,13 @@ export interface EventSummary {
   city: string | null
   lat: number | null
   lon: number | null
+  /** Where the recording ends, from the car's drive data. */
+  endLat: number | null
+  endLon: number | null
+  /** The nearest known place to the end point (drives have no event.json, so this is borrowed from a nearby event). */
+  endCity: string | null
+  /** The clips carry the car's driving data (speed, gear, steering…), so the player can show a HUD. */
+  hasDriveData: boolean
   reason: string | null
   reasonValue: number | null
   cameras: string[]
@@ -114,6 +121,47 @@ export interface MapPoint {
   city: string | null
   hasThumb: boolean
   favorite: boolean
+}
+
+/** A route recorded in an event's clips, as [lon, lat] pairs. */
+export interface EventRoute {
+  id: number
+  type: EventType
+  startTime: string
+  city: string | null
+  endCity: string | null
+  points: [number, number][]
+}
+
+/** The car's driving data for one segment, about ten readings a second; times are seconds into the segment. */
+export interface DriveDataSegment {
+  index: number
+  t: number[]
+  /** Metres per second. */
+  speed: number[]
+  /** 0 Park, 1 Drive, 2 Reverse, 3 Neutral. */
+  gear: number[]
+  /** Accelerator pedal, 0–100. */
+  pedal: number[]
+  /** Steering wheel angle in degrees; positive turns right. */
+  steer: number[]
+  brake: number[]
+  /** Bit 1 left signal, bit 2 right signal. */
+  blinker: number[]
+  /** 0 none, 1 self-driving, 2 Autosteer, 3 cruise control. */
+  autopilot: number[]
+  heading: number[]
+  /** Forward acceleration in m/s² (negative when slowing). */
+  accel: number[]
+  /** Sideways acceleration in m/s². */
+  lateral: number[]
+  lat: (number | null)[]
+  lon: (number | null)[]
+}
+
+export interface DriveData {
+  version: number
+  segments: DriveDataSegment[]
 }
 
 export interface Collection {
@@ -514,7 +562,9 @@ export const api = {
     request<Page<EventSummary>>('GET', `/api/events${query({ ...filters, page, pageSize })}`),
   facets: () => request<Facets>('GET', '/api/events/facets'),
   mapPoints: (filters: EventFilters) => request<MapPoint[]>('GET', `/api/events/map${query(filters)}`),
+  eventRoutes: (filters: EventFilters) => request<EventRoute[]>('GET', `/api/events/routes${query(filters)}`),
   event: (id: number) => request<EventDetail>('GET', `/api/events/${id}`),
+  driveData: (id: number) => request<DriveData>('GET', `/api/events/${id}/drive`),
   patchEvent: (id: number, patch: { favorite?: boolean; notes?: string }) =>
     request<EventSummary>('PATCH', `/api/events/${id}`, patch),
   trashEvent: (id: number) => request<void>('DELETE', `/api/events/${id}`),
@@ -525,8 +575,8 @@ export const api = {
   keepRange: (id: number, start: number, end: number) =>
     request<{ bytes: number }>('POST', `/api/events/${id}/keep`, { start, end }),
   process: (id: number, kind: JobKind) => request<Job>('POST', `/api/events/${id}/process`, { kind }),
-  exportClip: (id: number, camera: string, start: number, end: number) =>
-    request<Job>('POST', `/api/events/${id}/export`, { camera, start, end }),
+  exportClip: (id: number, camera: string, start: number, end: number, hud?: { speedUnit: 'mph' | 'kmh' }) =>
+    request<Job>('POST', `/api/events/${id}/export`, { camera, start, end, hud: !!hud, speedUnit: hud?.speedUnit }),
   bulk: (ids: number[], action: 'favorite' | 'unfavorite' | 'collect' | 'preview' | 'trim' | 'trash', collectionId?: number) =>
     request<void>('POST', '/api/events/bulk', { ids, action, collectionId }),
 

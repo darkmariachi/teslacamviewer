@@ -35,6 +35,17 @@ public class Event
     public double? ReasonValue { get; set; }
     public string? TriggerCamera { get; set; }
 
+    // From the driving data the car embeds in its clips (recent firmware, only while the car is awake).
+    /// <summary>True when any clip of the event carries the car's driving data, so the player can show it.</summary>
+    public bool HasDriveData { get; set; }
+    /// <summary>Version of the drive data reading this row was built with; older rows are read again.</summary>
+    public int DriveDataVersion { get; set; }
+    /// <summary>Where the recording ends, when the drive data has a GPS fix there.</summary>
+    public double? EndLat { get; set; }
+    public double? EndLon { get; set; }
+    /// <summary>The place name of the nearest event.json to the end point; drives have no event.json of their own.</summary>
+    public string? EndCity { get; set; }
+
     /// <summary>Comma separated camera names present in this event.</summary>
     public string Cameras { get; set; } = "";
     public int SegmentCount { get; set; }
@@ -63,6 +74,14 @@ public class Event
 
     public List<Segment> Segments { get; set; } = [];
     public List<CollectionEvent> Collections { get; set; } = [];
+}
+
+/// <summary>The route an event's clips recorded, as [lon, lat] pairs; kept apart from Event so lists stay light.</summary>
+public class EventTrack
+{
+    public int EventId { get; set; }
+    public Event Event { get; set; } = null!;
+    public string Points { get; set; } = "";
 }
 
 /// <summary>One recording interval (about a minute) with a file per camera.</summary>

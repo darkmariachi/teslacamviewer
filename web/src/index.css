@@ -26,9 +26,34 @@
   --radius-card: 14px;
 }
 
+/* Light theme: the same tokens, re-pointed. Video stays on black either way. */
+:root.light {
+  --color-ink: #f4f4f6;
+  --color-panel: #ffffff;
+  --color-raised: #f6f6f8;
+  --color-hover: #ececf0;
+  --color-line: #e2e2e7;
+  --color-line-strong: #cbcbd3;
+
+  --color-fg: #141416;
+  --color-dim: #55555d;
+  --color-faint: #84848c;
+
+  --color-accent: #d81b21;
+  --color-accent-hover: #c0161b;
+  --color-accent-soft: rgb(216 27 33 / 0.1);
+  --color-blue: #2f5bd3;
+  --color-ok: #1e9a46;
+  --color-warn: #b06f00;
+}
+
 html {
   color-scheme: dark;
   background: var(--color-ink);
+}
+
+html.light {
+  color-scheme: light;
 }
 
 body {
@@ -83,6 +108,10 @@ button:disabled {
 input[type='date']::-webkit-calendar-picker-indicator {
   filter: invert(0.7);
 }
+.light input[type='date']::-webkit-calendar-picker-indicator {
+  filter: none;
+  opacity: 0.6;
+}
 
 .label {
   font-size: 11px;
@@ -119,6 +148,13 @@ input[type='date']::-webkit-calendar-picker-indicator {
   animation: rise 0.25s ease-out both;
 }
 
+/* Turn signals in the drive HUD. */
+@keyframes blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .skeleton,
   .rise {
@@ -141,8 +177,11 @@ input[type='date']::-webkit-calendar-picker-indicator {
 .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
   filter: invert(1);
 }
+.light .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: none;
+}
 .maplibregl-ctrl-attrib {
-  background: rgb(10 10 11 / 0.7) !important;
+  background: color-mix(in srgb, var(--color-ink) 70%, transparent) !important;
   color: var(--color-faint);
 }
 .maplibregl-ctrl-attrib a {

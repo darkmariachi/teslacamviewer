@@ -10,7 +10,7 @@ public static class EventsApi
 {
     public record PatchEvent(bool? Favorite, string? Notes);
     public record ProcessRequest(string Kind);
-    public record ExportRequest(string Camera, double Start, double End);
+    public record ExportRequest(string Camera, double Start, double End, bool? Hud, string? SpeedUnit);
     public record KeepRequest(double Start, double End);
     public record BulkRequest(int[] Ids, string Action, int? CollectionId);
 
@@ -69,6 +69,28 @@ public static class EventsApi
             {
                 p.Id, p.Lat, p.Lon, p.StartTime, type = p.Type.ToString().ToLowerInvariant(), p.Reason, p.City, p.HasThumb, p.Favorite,
             }));
+        });
+
+        // Routes recorded in the clips' own drive data, for lines on the map.
+        group.MapGet("/routes", async (AppDb db, string? type, bool? favorite, int? collection, string? reason, string? city,
+            DateOnly? from, DateOnly? to, string? q) =>
+        {
+            var routes = await Filter(db, type, favorite, collection, reason, city, from, to, q, null)
+                .Join(db.EventTracks, e => e.Id, t => t.EventId, (e, t) => new { e.Id, e.Type, e.StartTime, e.City, e.EndCity, t.Points })
+                .OrderByDescending(e => e.StartTime)
+                .ToListAsync();
+            return Results.Ok(routes.Select(r => new
+            {
+                r.Id, type = r.Type.ToString().ToLowerInvariant(), r.StartTime, r.City, r.EndCity,
+                points = JsonSerializer.Deserialize<double[][]>(r.Points),
+            }));
+        });
+
+        // The car's driving data for each segment, for the player's HUD.
+        group.MapGet("/{id:int}/drive", (int id, AppPaths paths) =>
+        {
+            var file = paths.DriveData(id);
+            return File.Exists(file) ? Results.File(file, "application/json") : Results.NotFound();
         });
 
         group.MapGet("/{id:int}", async (int id, AppDb db, JobQueue queue, SettingsService settings) =>
@@ -185,7 +207,7 @@ public static class EventsApi
             if (req.Camera != "grid" && !Cameras.Parse(ev.Cameras).Contains(req.Camera))
                 return Results.BadRequest(new { error = "Unknown camera." });
             if (req.End - req.Start < 1) return Results.BadRequest(new { error = "Pick a range of at least one second." });
-            var args = JsonSerializer.Serialize(new ExportArgs(req.Camera, req.Start, req.End), JsonSerializerOptions.Web);
+            var args = JsonSerializer.Serialize(new ExportArgs(req.Camera, req.Start, req.End, req.Hud == true && ev.HasDriveData, req.SpeedUnit == "kmh" ? "kmh" : "mph"), JsonSerializerOptions.Web);
             var job = await queue.RequestAsync(id, JobKind.Export, args);
             return Results.Ok(Dto.JobDto(job, queue));
         });

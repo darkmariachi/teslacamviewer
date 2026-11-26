@@ -67,6 +67,7 @@ public class AppPaths
     public string Thumb(int eventId) => Path.Combine(EventCache(eventId), "thumb.jpg");
     public string EventClip(int eventId) => Path.Combine(EventCache(eventId), "event.mp4");
     public string Preview(int eventId) => Path.Combine(EventCache(eventId), "preview.mp4");
+    public string DriveData(int eventId) => Path.Combine(EventCache(eventId), "drive.json");
     public string Transcoded(int eventId, int fileId) => Path.Combine(EventCache(eventId), $"t_{fileId}.mp4");
     public string Export(int jobId) => Path.Combine(ExportsDir, $"{jobId}.mp4");
 

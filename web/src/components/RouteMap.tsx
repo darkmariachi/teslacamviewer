@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { GeoJSONSource, Map as MapLibreMap, Marker } from 'maplibre-gl'
-import { MAP_STYLE, loadMapLibre } from '../lib/map'
+import { loadMapLibre, mapStyle } from '../lib/map'
+import { resolvedTheme } from '../lib/prefs'
 
 type Route = [number, number][]
 
@@ -35,13 +36,13 @@ export function RouteMap({ route, marker, className }: { route: Route; marker?: 
     let cancelled = false
     loadMapLibre().then((maplibre) => {
       if (cancelled || !node.current) return
-      const m = new maplibre.Map({ container: node.current, style: MAP_STYLE, center: [-98, 38], zoom: 3, attributionControl: { compact: true } })
+      const m = new maplibre.Map({ container: node.current, style: mapStyle(), center: [-98, 38], zoom: 3, attributionControl: { compact: true } })
       m.addControl(new maplibre.NavigationControl({ showCompass: false }), 'bottom-right')
       m.on('load', () => {
         node.current?.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show')
         m.addSource('route', { type: 'geojson', data: line([]) })
-        // A wide dark casing under the line keeps it readable over busy streets.
-        m.addLayer({ id: 'route-casing', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#0a0a0b', 'line-width': 8, 'line-opacity': 0.7 } })
+        // A wide casing under the line, in the page colour, keeps it readable over busy streets.
+        m.addLayer({ id: 'route-casing', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': resolvedTheme() === 'light' ? '#ffffff' : '#0a0a0b', 'line-width': 8, 'line-opacity': 0.7 } })
         m.addLayer({ id: 'route', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#3e6ae1', 'line-width': 4 } })
         setReady(true)
       })
