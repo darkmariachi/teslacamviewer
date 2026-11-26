@@ -237,6 +237,9 @@ namespace TeslaCam.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("Archived")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Cameras")
                         .IsRequired()
                         .HasColumnType("TEXT");

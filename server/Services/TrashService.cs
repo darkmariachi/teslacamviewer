@@ -21,7 +21,7 @@ public class TrashService(IDbContextFactory<AppDb> dbf, AppPaths paths, Settings
 
         var source = paths.EventDir(ev);
         var trashRel = $"{AppPaths.TrashDirName}/{ev.Type}/{ev.Name}_{DateTime.UtcNow:yyyyMMddHHmmss}";
-        var target = Path.Combine(paths.ClipsBase, trashRel);
+        var target = Path.Combine(paths.BaseFor(ev), trashRel);
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
         if (ev.Type == EventType.Recent)
         {
@@ -50,8 +50,8 @@ public class TrashService(IDbContextFactory<AppDb> dbf, AppPaths paths, Settings
         var ev = await db.Events.Include(e => e.Segments).ThenInclude(s => s.Files).FirstAsync(e => e.Id == eventId);
         if (ev.TrashedAt == null || ev.TrashPath == null) return;
 
-        var source = Path.Combine(paths.ClipsBase, ev.TrashPath);
-        var target = Path.Combine(paths.ClipsBase, ev.RelPath);
+        var source = Path.Combine(paths.BaseFor(ev), ev.TrashPath);
+        var target = Path.Combine(paths.BaseFor(ev), ev.RelPath);
         if (ev.Type == EventType.Recent)
         {
             Directory.CreateDirectory(target);
@@ -106,7 +106,7 @@ public class TrashService(IDbContextFactory<AppDb> dbf, AppPaths paths, Settings
 
     private void MoveSegments(Event ev, List<Segment> segments)
     {
-        var target = Path.Combine(paths.TrashDir, SegmentsDir, $"{ev.Name}_{DateTime.UtcNow:yyyyMMddHHmmss}");
+        var target = Path.Combine(paths.TrashDirFor(ev), SegmentsDir, $"{ev.Name}_{DateTime.UtcNow:yyyyMMddHHmmss}");
         Directory.CreateDirectory(target);
         var source = paths.EventDir(ev);
         foreach (var file in segments.SelectMany(s => s.Files))
@@ -124,7 +124,7 @@ public class TrashService(IDbContextFactory<AppDb> dbf, AppPaths paths, Settings
         await using var db = await dbf.CreateDbContextAsync();
         var ev = await db.Events.FirstOrDefaultAsync(e => e.Id == eventId && e.TrashedAt != null);
         if (ev?.TrashPath == null) return;
-        var dir = Path.Combine(paths.ClipsBase, ev.TrashPath);
+        var dir = Path.Combine(paths.BaseFor(ev), ev.TrashPath);
         if (Directory.Exists(dir)) Directory.Delete(dir, true);
         paths.DeleteEventCache(ev.Id);
         db.Events.Remove(ev);
@@ -173,7 +173,8 @@ public class TrashService(IDbContextFactory<AppDb> dbf, AppPaths paths, Settings
         if (!s.HomeCleanupEnabled || s.HomeLat == null) return [];
         await using var db = await dbf.CreateDbContextAsync();
         var located = await db.Events.AsNoTracking()
-            .Where(e => e.TrashedAt == null && e.Type == EventType.Sentry && !e.Favorite && !e.Collections.Any()
+            // Archived events were kept on purpose.
+            .Where(e => e.TrashedAt == null && e.Type == EventType.Sentry && !e.Favorite && !e.Archived && !e.Collections.Any()
                         && e.Lat != null && e.Lon != null)
             .ToListAsync();
         var now = DateTime.Now;
@@ -202,10 +203,14 @@ public class TrashService(IDbContextFactory<AppDb> dbf, AppPaths paths, Settings
         }
         foreach (var id in expired) await PurgeAsync(id);
 
-        var segments = Path.Combine(paths.TrashDir, SegmentsDir);
-        if (!Directory.Exists(segments)) return;
-        foreach (var dir in new DirectoryInfo(segments).EnumerateDirectories().Where(d => d.CreationTimeUtc < cutoff))
-            dir.Delete(true);
+        foreach (var clipBase in new[] { paths.ClipsBase, paths.ArchiveBase })
+        {
+            if (clipBase == null) continue;
+            var segments = Path.Combine(clipBase, AppPaths.TrashDirName, SegmentsDir);
+            if (!Directory.Exists(segments)) continue;
+            foreach (var dir in new DirectoryInfo(segments).EnumerateDirectories().Where(d => d.CreationTimeUtc < cutoff))
+                dir.Delete(true);
+        }
     }
 
     private static void TryDeleteEmpty(string dir)

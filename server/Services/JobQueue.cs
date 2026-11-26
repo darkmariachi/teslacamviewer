@@ -10,7 +10,8 @@ public class JobQueue(IDbContextFactory<AppDb> dbf, SettingsService settings)
     public const int UserBoost = 1000;
 
     public static readonly JobKind[] LightKinds = [JobKind.Probe, JobKind.Thumbnail];
-    public static readonly JobKind[] HeavyKinds = [JobKind.Export, JobKind.Transcode, JobKind.Preview];
+    // Copying to the archive is long disk work, so it waits its turn with the encodes.
+    public static readonly JobKind[] HeavyKinds = [JobKind.Export, JobKind.Transcode, JobKind.Preview, JobKind.Archive];
 
     private readonly SemaphoreSlim _wakeLight = new(0);
     private readonly SemaphoreSlim _wakeHeavy = new(0);

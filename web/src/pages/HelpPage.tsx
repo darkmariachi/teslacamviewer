@@ -12,6 +12,7 @@ const SECTIONS = [
   { id: 'map', title: 'The map' },
   { id: 'appearance', title: 'Light theme and units' },
   { id: 'saving-space', title: 'Saving space' },
+  { id: 'archive', title: 'An archive folder' },
   { id: 'teslausb', title: 'teslausb' },
   { id: 'car-logger', title: "The car's state" },
   { id: 'phone', title: 'Using it from a phone' },
@@ -223,6 +224,36 @@ export default function HelpPage() {
                 <strong>Merged videos</strong> take extra space. Admin → Settings chooses which events get one automatically.
               </li>
             </ul>
+          </Section>
+
+          <Section id="archive" title="An archive folder">
+            {desktop ? (
+              <p>
+                The server version can keep a second, permanent clip folder next to a drive brought in from the car, and copy
+                events into it. In the desktop app, import from the drive instead: the library folder is already permanent.
+              </p>
+            ) : (
+              <>
+                <p>
+                  If the clip folder is a drive you bring in from the car, the server can also keep a permanent archive folder,
+                  set with <Code>TESLACAM_ARCHIVE_ROOT</Code> (see the README). Events from both are listed together.
+                </p>
+                <ul>
+                  <li>
+                    The archive button on an event, or <strong>Archive</strong> on a selection, copies the event into the archive
+                    with its event.json and thumbnail. The drive keeps its own copy. Progress shows in Admin → Processing.
+                  </li>
+                  <li>
+                    The event keeps its notes, favorite and collections, shows an Archive badge, and plays from the archive from
+                    then on. Filters → Where lists only archived events, or only the rest.
+                  </li>
+                  <li>
+                    Unplugging the drive never removes archived events, and an event the archive already has with different
+                    files is never overwritten. Deleting an archived event moves it to the archive's own trash folder.
+                  </li>
+                </ul>
+              </>
+            )}
           </Section>
 
           <Section id="teslausb" title="teslausb">

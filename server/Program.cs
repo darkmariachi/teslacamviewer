@@ -31,6 +31,7 @@ builder.Services.AddSingleton<MediaProcessor>();
 builder.Services.AddSingleton<Scanner>();
 builder.Services.AddSingleton<JobRunner>();
 builder.Services.AddSingleton<TrashService>();
+builder.Services.AddSingleton<EventArchive>();
 builder.Services.AddSingleton<RangeKeeper>();
 builder.Services.AddSingleton<CarLogService>();
 builder.Services.AddSingleton<ArchiverService>();

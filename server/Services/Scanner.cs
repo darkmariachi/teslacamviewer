@@ -45,6 +45,20 @@ public partial class Scanner(IDbContextFactory<AppDb> dbf, AppPaths paths, JobQu
         if (_trigger.CurrentCount == 0) _trigger.Release();
     }
 
+    /// <summary>Runs work that moves clips and updates their events with no scan in between, so a scan never sees half of it.</summary>
+    public async Task ExclusiveAsync(Func<Task> work, CancellationToken ct)
+    {
+        await _scanLock.WaitAsync(ct);
+        try
+        {
+            await work();
+        }
+        finally
+        {
+            _scanLock.Release();
+        }
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -75,7 +89,11 @@ public partial class Scanner(IDbContextFactory<AppDb> dbf, AppPaths paths, JobQu
 
     private record PhysicalFile(DateTime Time, string Camera, string FileName, long Size);
 
-    private record PhysicalEvent(EventType Type, string Name, string RelPath, List<PhysicalFile> Files, string? EventJsonPath, string Signature);
+    private record PhysicalEvent(EventType Type, string Name, string RelPath, List<PhysicalFile> Files, string? EventJsonPath, string Signature)
+    {
+        /// <summary>Found under the archive folder rather than the main one.</summary>
+        public bool Archived { get; init; }
+    }
 
     public async Task<ScanResult> ScanAsync(CancellationToken ct)
     {
@@ -85,43 +103,53 @@ public partial class Scanner(IDbContextFactory<AppDb> dbf, AppPaths paths, JobQu
         try
         {
             var baseDir = paths.ClipsBase;
-            if (!Directory.Exists(baseDir)) throw new DirectoryNotFoundException($"Clip folder {baseDir} does not exist");
+            var archiveDir = paths.ArchiveBase;
+            if (!Directory.Exists(baseDir) && (archiveDir == null || !Directory.Exists(archiveDir)))
+                throw new DirectoryNotFoundException($"Clip folder {baseDir} does not exist");
 
-            var found = new Dictionary<(EventType, string, string), PhysicalEvent>();
+            var found = new Dictionary<(EventType, string, string, bool), PhysicalEvent>();
             // An event copied into both the library and a TeslaCam folder inside it is listed once, from the library.
+            // The archive is read first, so an event already archived is shown from there, not from the drive it
+            // was copied off.
             var seen = new HashSet<(EventType, string)>();
             void Add(PhysicalEvent pe)
             {
-                if (seen.Add((pe.Type, pe.Name))) found[(pe.Type, pe.Name, pe.RelPath)] = pe;
+                if (seen.Add((pe.Type, pe.Name))) found[(pe.Type, pe.Name, pe.RelPath, pe.Archived)] = pe;
             }
-            var anyTypeDir = false;
-            foreach (var clipDir in paths.ClipBases())
+            // Which folders (archive or main) had any clip folders this time; only their events can be removed.
+            var present = new HashSet<bool>();
+            var roots = archiveDir != null ? new[] { (Archived: true, Base: archiveDir), (Archived: false, Base: baseDir) } : [(false, baseDir)];
+            foreach (var (archived, rootBase) in roots)
+            foreach (var clipDir in paths.ClipBases(archived))
             {
-                var relative = Path.GetRelativePath(baseDir, clipDir);
+                if (!Directory.Exists(clipDir)) continue;
+                var relative = Path.GetRelativePath(rootBase, clipDir);
                 var prefix = relative == "." ? "" : relative.Replace('\\', '/') + "/";
                 foreach (var (type, dirName) in new[] { (EventType.Sentry, "SentryClips"), (EventType.Saved, "SavedClips") })
                 {
                     var dir = Path.Combine(clipDir, dirName);
                     if (!Directory.Exists(dir)) continue;
-                    anyTypeDir = true;
+                    present.Add(archived);
                     foreach (var sub in Directory.EnumerateDirectories(dir))
                     {
                         ct.ThrowIfCancellationRequested();
-                        if (ReadFolder(type, sub, Path.GetFileName(sub), $"{prefix}{dirName}/{Path.GetFileName(sub)}") is { } pe) Add(pe);
+                        if (ReadFolder(type, sub, Path.GetFileName(sub), $"{prefix}{dirName}/{Path.GetFileName(sub)}") is { } pe)
+                            Add(pe with { Archived = archived });
                     }
                 }
                 var recentDir = Path.Combine(clipDir, "RecentClips");
                 if (Directory.Exists(recentDir))
                 {
-                    anyTypeDir = true;
-                    foreach (var pe in ReadRecent(recentDir, baseDir, ct)) Add(pe);
+                    present.Add(archived);
+                    foreach (var pe in ReadRecent(recentDir, rootBase, ct)) Add(pe with { Archived = archived });
                 }
             }
 
             await using var db = await dbf.CreateDbContextAsync(ct);
             var existing = await db.Events.Where(e => e.TrashedAt == null)
-                .Select(e => new { e.Id, e.Type, e.Name, e.RelPath, e.Signature, e.MetaVersion }).ToListAsync(ct);
-            var existingByKey = existing.ToDictionary(e => (e.Type, e.Name, e.RelPath));
+                .Select(e => new { e.Id, e.Type, e.Name, e.RelPath, e.Archived, e.Signature, e.MetaVersion }).ToListAsync(ct);
+            // First one wins should two rows ever share a key, rather than failing every scan from then on.
+            var existingByKey = existing.GroupBy(e => (e.Type, e.Name, e.RelPath, e.Archived)).ToDictionary(g => g.Key, g => g.First());
 
             int added = 0, updated = 0, removed = 0;
             var fresh = new List<Event>();
@@ -129,7 +157,7 @@ public partial class Scanner(IDbContextFactory<AppDb> dbf, AppPaths paths, JobQu
             foreach (var pe in found.Values.OrderByDescending(p => p.Name))
             {
                 ct.ThrowIfCancellationRequested();
-                if (existingByKey.TryGetValue((pe.Type, pe.Name, pe.RelPath), out var known))
+                if (existingByKey.TryGetValue((pe.Type, pe.Name, pe.RelPath, pe.Archived), out var known))
                 {
                     if (known.Signature == pe.Signature)
                     {
@@ -159,7 +187,7 @@ public partial class Scanner(IDbContextFactory<AppDb> dbf, AppPaths paths, JobQu
                 }
                 else
                 {
-                    var ev = new Event { Type = pe.Type, Name = pe.Name, RelPath = pe.RelPath, IndexedAt = DateTime.UtcNow };
+                    var ev = new Event { Type = pe.Type, Name = pe.Name, RelPath = pe.RelPath, Archived = pe.Archived, IndexedAt = DateTime.UtcNow };
                     Fill(ev, pe);
                     db.Events.Add(ev);
                     queue.AddInitialJobs(db, ev);
@@ -183,21 +211,19 @@ public partial class Scanner(IDbContextFactory<AppDb> dbf, AppPaths paths, JobQu
             foreach (var e in unread) db.Jobs.Add(JobQueue.NewJob(e, JobKind.Probe));
             if (unread.Count > 0) await db.SaveChangesAsync(ct);
 
-            // If the share is not mounted nothing is found; never treat that as "everything was deleted".
-            if (anyTypeDir)
+            // If the share is not mounted nothing is found; never treat that as "everything was deleted". The same
+            // goes for each folder on its own: unplugging the car's drive must not empty the archive, or the reverse.
+            foreach (var gone in existing.Where(e => present.Contains(e.Archived) && !found.ContainsKey((e.Type, e.Name, e.RelPath, e.Archived))))
             {
-                foreach (var gone in existing.Where(e => !found.ContainsKey((e.Type, e.Name, e.RelPath))))
-                {
-                    await db.Events.Where(e => e.Id == gone.Id).ExecuteDeleteAsync(ct);
-                    paths.DeleteEventCache(gone.Id);
-                    removed++;
-                }
+                await db.Events.Where(e => e.Id == gone.Id).ExecuteDeleteAsync(ct);
+                paths.DeleteEventCache(gone.Id);
+                removed++;
             }
 
             queue.Wake();
             var result = new ScanResult(added, updated, removed, found.Count, Math.Round((DateTime.UtcNow - started).TotalSeconds, 1));
             State.LastResult = result;
-            State.LastError = anyTypeDir ? null : $"No SentryClips, SavedClips or RecentClips folder found in {baseDir}";
+            State.LastError = present.Count > 0 ? null : $"No SentryClips, SavedClips or RecentClips folder found in {baseDir}";
             State.LastRunUtc = DateTime.UtcNow;
             if (added + updated + removed > 0)
                 log.LogInformation("Scan: {Added} added, {Updated} updated, {Removed} removed", added, updated, removed);

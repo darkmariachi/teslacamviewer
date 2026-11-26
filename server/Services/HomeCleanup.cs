@@ -29,11 +29,11 @@ public static class HomeCleanup
 
     /// <summary>
     /// When the event moves to the trash, or null if the rule leaves it alone.
-    /// Favorites and events in a collection are always kept; <see cref="Event.Collections"/> must be loaded.
+    /// Favorites, archived events and events in a collection are always kept; <see cref="Event.Collections"/> must be loaded.
     /// </summary>
     public static DateTime? DueAt(Event e, AppSettings s)
     {
-        if (!s.HomeCleanupEnabled || e.Type != EventType.Sentry || e.TrashedAt != null) return null;
+        if (!s.HomeCleanupEnabled || e.Type != EventType.Sentry || e.TrashedAt != null || e.Archived) return null;
         if (e.Favorite || e.Collections.Count > 0 || IsBump(e.Reason) || !IsAtHome(e, s)) return null;
         return e.StartTime.AddDays(s.HomeCleanupDays);
     }

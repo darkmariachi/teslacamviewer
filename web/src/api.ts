@@ -1,13 +1,15 @@
 // Typed client for the TeslaCam API. Authentication is a same-site cookie, so plain fetch is enough.
 
 export type EventType = 'sentry' | 'saved' | 'recent'
-export type JobKind = 'probe' | 'thumbnail' | 'preview' | 'transcode' | 'export'
+export type JobKind = 'probe' | 'thumbnail' | 'preview' | 'transcode' | 'export' | 'archive'
 export type JobStatus = 'queued' | 'running' | 'done' | 'failed' | 'canceled'
 
 export interface EventSummary {
   id: number
   type: EventType
   name: string
+  /** Lives in the archive folder (TESLACAM_ARCHIVE_ROOT) rather than the main one. */
+  archived: boolean
   startTime: string
   endTime: string
   durationSec: number
@@ -104,6 +106,7 @@ export interface Page<T> {
 export interface Facets {
   total: number
   favorites: number
+  archived: number
   types: Partial<Record<EventType, number>>
   reasons: { value: string; count: number }[]
   cities: { value: string; count: number }[]
@@ -378,6 +381,8 @@ export interface Overview {
     clips: { freeBytes: number; totalBytes: number } | null
     data: { freeBytes: number; totalBytes: number } | null
     clipsWritable: boolean
+    /** The archive folder's drive, when one is set up and present. */
+    archive: { freeBytes: number; totalBytes: number } | null
   }
   trash: { count: number; bytes: number; retentionDays: number }
 }
@@ -390,6 +395,8 @@ export interface AuthStatus {
   libraryFolder: string | null
   /** False when the clip folder is missing: an unplugged drive, an unmounted share, a deleted folder. */
   libraryAvailable: boolean
+  /** The archive folder, when the server has one (TESLACAM_ARCHIVE_ROOT). */
+  archive: { folder: string; available: boolean; writable: boolean } | null
 }
 
 export interface ImportCheck {
@@ -499,6 +506,8 @@ export interface EventFilters {
   from?: string
   to?: string
   q?: string
+  /** Only events in the archive folder, or only those outside it. */
+  where?: 'archive' | 'main'
   sort?: 'newest' | 'oldest' | 'longest' | 'largest'
 }
 
@@ -577,7 +586,8 @@ export const api = {
   process: (id: number, kind: JobKind) => request<Job>('POST', `/api/events/${id}/process`, { kind }),
   exportClip: (id: number, camera: string, start: number, end: number, hud?: { speedUnit: 'mph' | 'kmh' }) =>
     request<Job>('POST', `/api/events/${id}/export`, { camera, start, end, hud: !!hud, speedUnit: hud?.speedUnit }),
-  bulk: (ids: number[], action: 'favorite' | 'unfavorite' | 'collect' | 'preview' | 'trim' | 'trash', collectionId?: number) =>
+  archiveEvent: (id: number) => request<Job>('POST', `/api/events/${id}/archive`),
+  bulk: (ids: number[], action: 'favorite' | 'unfavorite' | 'collect' | 'preview' | 'trim' | 'trash' | 'archive', collectionId?: number) =>
     request<void>('POST', '/api/events/bulk', { ids, action, collectionId }),
 
   collections: () => request<Collection[]>('GET', '/api/collections'),

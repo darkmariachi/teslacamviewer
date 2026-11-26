@@ -37,6 +37,7 @@ public sealed class RangeKeeperTests : IDisposable
         services.AddSingleton<JobQueue>();
         services.AddSingleton<MediaProcessor>();
         services.AddSingleton<Scanner>();
+        services.AddSingleton<EventArchive>();
         services.AddSingleton<JobRunner>();
         services.AddSingleton<RangeKeeper>();
         _services = services.BuildServiceProvider();

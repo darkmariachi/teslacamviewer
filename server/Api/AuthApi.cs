@@ -14,7 +14,7 @@ public static class AuthApi
     {
         var group = app.MapGroup("/api/auth");
 
-        group.MapGet("/status", async (HttpContext ctx, AuthService auth, DesktopMode desktop, AppPaths paths) => Results.Ok(new
+        group.MapGet("/status", async (HttpContext ctx, AuthService auth, DesktopMode desktop, AppPaths paths, EventArchive archive) => Results.Ok(new
         {
             // The desktop app has no password; its window is signed in by a cookie.
             setupRequired = !desktop.Enabled && !await auth.IsConfiguredAsync(),
@@ -23,6 +23,8 @@ public static class AuthApi
             libraryFolder = desktop.Enabled && ctx.User.Identity?.IsAuthenticated == true ? paths.Root : null,
             // False when the clip folder is missing: an unplugged drive, an unmounted share, a deleted folder.
             libraryAvailable = Directory.Exists(paths.Root),
+            // The archive folder, when TESLACAM_ARCHIVE_ROOT is set: where it is and whether events can be copied in.
+            archive = ctx.User.Identity?.IsAuthenticated == true && archive.Status() is { Folder: not null } a ? a : null,
         }));
 
         // First run only: choose the password.

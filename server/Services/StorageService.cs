@@ -20,6 +20,7 @@ public class StorageService(AppPaths paths)
                 clips = Drive(paths.ClipsBase),
                 data = Drive(paths.Cache),
                 clipsWritable = IsWritable(paths.ClipsBase),
+                archive = paths.ArchiveBase is { } archive && Directory.Exists(archive) ? Drive(archive) : null,
             };
             _takenUtc = DateTime.UtcNow;
             return _snapshot;
@@ -53,7 +54,7 @@ public class StorageService(AppPaths paths)
         }
     }
 
-    private static bool IsWritable(string dir)
+    public static bool IsWritable(string dir)
     {
         try
         {
