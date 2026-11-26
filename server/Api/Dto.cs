@@ -13,6 +13,7 @@ public static class Dto
         e.Id,
         type = e.Type.ToString().ToLowerInvariant(),
         e.Name,
+        e.Archived,
         e.StartTime,
         e.EndTime,
         e.DurationSec,

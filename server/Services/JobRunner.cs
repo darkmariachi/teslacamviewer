@@ -8,7 +8,8 @@ namespace TeslaCam.Services;
 /// Runs queued jobs. Two lanes run side by side so quick work (probing, thumbnails) is never
 /// stuck behind a long encode; each lane handles one job at a time.
 /// </summary>
-public class JobRunner(IDbContextFactory<AppDb> dbf, JobQueue queue, MediaProcessor processor, SettingsService settings, AppPaths paths, ILogger<JobRunner> log)
+public class JobRunner(IDbContextFactory<AppDb> dbf, JobQueue queue, MediaProcessor processor, EventArchive archive, SettingsService settings,
+    AppPaths paths, ILogger<JobRunner> log)
     : BackgroundService
 {
     private readonly ConcurrentDictionary<int, CancellationTokenSource> _running = new();
@@ -114,7 +115,9 @@ public class JobRunner(IDbContextFactory<AppDb> dbf, JobQueue queue, MediaProces
         });
         try
         {
-            await processor.RunAsync(job, p => queue.LiveProgress[job.Id] = Math.Clamp(p, 0, 1), cts.Token);
+            Action<double> report = p => queue.LiveProgress[job.Id] = Math.Clamp(p, 0, 1);
+            if (job.Kind == JobKind.Archive) await archive.CopyAsync(job.EventId, report, cts.Token);
+            else await processor.RunAsync(job, report, cts.Token);
             await UpdateAsync(job.Id, j =>
             {
                 j.Status = JobStatus.Done;

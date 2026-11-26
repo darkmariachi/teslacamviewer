@@ -19,9 +19,9 @@ public static class EventsApi
         var group = app.MapGroup("/api/events").RequireAuthorization();
 
         group.MapGet("", async (AppDb db, string? type, bool? favorite, int? collection, string? reason, string? city,
-            DateOnly? from, DateOnly? to, string? q, bool? located, string? sort, int? page, int? pageSize) =>
+            DateOnly? from, DateOnly? to, string? q, bool? located, string? where, string? sort, int? page, int? pageSize) =>
         {
-            var query = Filter(db, type, favorite, collection, reason, city, from, to, q, located);
+            var query = Filter(db, type, favorite, collection, reason, city, from, to, q, located, where);
             query = sort switch
             {
                 "oldest" => query.OrderBy(e => e.StartTime),
@@ -49,6 +49,7 @@ public static class EventsApi
             {
                 total = await live.CountAsync(),
                 favorites = await live.CountAsync(e => e.Favorite),
+                archived = await live.CountAsync(e => e.Archived),
                 types = types.ToDictionary(t => t.type.ToString().ToLowerInvariant(), t => t.count),
                 reasons,
                 cities,
@@ -59,9 +60,9 @@ public static class EventsApi
 
         // Lightweight list for the map.
         group.MapGet("/map", async (AppDb db, string? type, bool? favorite, int? collection, string? reason, string? city,
-            DateOnly? from, DateOnly? to, string? q) =>
+            DateOnly? from, DateOnly? to, string? q, string? where) =>
         {
-            var points = await Filter(db, type, favorite, collection, reason, city, from, to, q, true)
+            var points = await Filter(db, type, favorite, collection, reason, city, from, to, q, true, where)
                 .OrderByDescending(e => e.StartTime)
                 .Select(e => new { e.Id, e.Lat, e.Lon, e.StartTime, e.Type, e.Reason, e.City, e.HasThumb, e.Favorite })
                 .ToListAsync();
@@ -73,9 +74,9 @@ public static class EventsApi
 
         // Routes recorded in the clips' own drive data, for lines on the map.
         group.MapGet("/routes", async (AppDb db, string? type, bool? favorite, int? collection, string? reason, string? city,
-            DateOnly? from, DateOnly? to, string? q) =>
+            DateOnly? from, DateOnly? to, string? q, string? where) =>
         {
-            var routes = await Filter(db, type, favorite, collection, reason, city, from, to, q, null)
+            var routes = await Filter(db, type, favorite, collection, reason, city, from, to, q, null, where)
                 .Join(db.EventTracks, e => e.Id, t => t.EventId, (e, t) => new { e.Id, e.Type, e.StartTime, e.City, e.EndCity, t.Points })
                 .OrderByDescending(e => e.StartTime)
                 .ToListAsync();
@@ -193,11 +194,20 @@ public static class EventsApi
         // Ask for a merged preview, a compatibility transcode, or fresh metadata right now.
         group.MapPost("/{id:int}/process", async (int id, ProcessRequest req, JobQueue queue, AppDb db) =>
         {
-            if (!Enum.TryParse<JobKind>(req.Kind, true, out var kind) || kind == JobKind.Export)
+            if (!Enum.TryParse<JobKind>(req.Kind, true, out var kind) || kind is JobKind.Export or JobKind.Archive)
                 return Results.BadRequest(new { error = "Unknown job kind." });
             if (!await db.Events.AnyAsync(e => e.Id == id)) return Results.NotFound();
             var job = await queue.RequestAsync(id, kind);
             return Results.Ok(Dto.JobDto(job, queue));
+        });
+
+        // Copy the event into the archive folder; it then lives there.
+        group.MapPost("/{id:int}/archive", async (int id, JobQueue queue, EventArchive archive, AppDb db) =>
+        {
+            var ev = await db.Events.AsNoTracking().FirstOrDefaultAsync(e => e.Id == id);
+            if (ev == null) return Results.NotFound();
+            if (archive.Refusal(ev) is { } reason) return Results.BadRequest(new { error = reason });
+            return Results.Ok(Dto.JobDto(await queue.RequestAsync(id, JobKind.Archive), queue));
         });
 
         group.MapPost("/{id:int}/export", async (int id, ExportRequest req, JobQueue queue, AppDb db) =>
@@ -213,7 +223,7 @@ public static class EventsApi
         });
 
         // One action applied to many events from the list's selection mode.
-        group.MapPost("/bulk", async (BulkRequest req, AppDb db, TrashService trash, JobQueue queue) =>
+        group.MapPost("/bulk", async (BulkRequest req, AppDb db, TrashService trash, JobQueue queue, EventArchive archive) =>
         {
             var ids = (req.Ids ?? []).Distinct().Take(500).ToArray();
             switch (req.Action)
@@ -233,6 +243,12 @@ public static class EventsApi
                 case "preview":
                     foreach (var id in ids) await queue.RequestAsync(id, JobKind.Preview);
                     break;
+                case "archive":
+                    var candidates = await db.Events.AsNoTracking().Where(e => ids.Contains(e.Id)).ToListAsync();
+                    // Events already archived (or in the trash) are skipped; a folder problem stops the lot.
+                    if (archive.Status() is not { Writable: true }) return Results.BadRequest(new { error = archive.Refusal(new Event()) });
+                    foreach (var ev in candidates.Where(e => archive.Refusal(e) == null)) await queue.RequestAsync(ev.Id, JobKind.Archive);
+                    break;
                 case "trim":
                     return await Guard(async () =>
                     {
@@ -251,7 +267,7 @@ public static class EventsApi
     }
 
     private static IQueryable<Event> Filter(AppDb db, string? type, bool? favorite, int? collection, string? reason, string? city,
-        DateOnly? from, DateOnly? to, string? q, bool? located)
+        DateOnly? from, DateOnly? to, string? q, bool? located, string? where = null)
     {
         var query = db.Events.AsNoTracking().Where(e => e.TrashedAt == null);
         if (Enum.TryParse<EventType>(type, true, out var eventType)) query = query.Where(e => e.Type == eventType);
@@ -262,6 +278,8 @@ public static class EventsApi
         if (from is { } f) query = query.Where(e => e.StartTime >= f.ToDateTime(TimeOnly.MinValue));
         if (to is { } t) query = query.Where(e => e.StartTime < t.AddDays(1).ToDateTime(TimeOnly.MinValue));
         if (located == true) query = query.Where(e => e.Lat != null && e.Lon != null);
+        if (where == "archive") query = query.Where(e => e.Archived);
+        else if (where == "main") query = query.Where(e => !e.Archived);
         if (!string.IsNullOrWhiteSpace(q))
         {
             var like = $"%{q.Trim().Replace(' ', '_')}%";

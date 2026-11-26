@@ -108,6 +108,7 @@ been run on Windows 11. Here is what has and has not been tried.
 | car-logger (car state over Bluetooth, on the teslausb Pi)   | Experimental; tried on one car, two drives    |
 | Driving data HUD, drive routes and places from the clips    | New; tried with one 2023 Model Y's clips       |
 | Light theme                                                 | New                                            |
+| Archive folder (`TESLACAM_ARCHIVE_ROOT`) and Archive action | New; tested with generated clips               |
 
 If you try one of the rows that is not marked "Works", an issue saying how it went is very welcome.
 
@@ -346,10 +347,31 @@ The server reads these from the compose file:
 | `TESLACAM_ROOT`               | `/teslacam`            | Folder with the clips                                          |
 | `TESLACAM_DATA`               | `/data`                | Database, login keys and derived files                         |
 | `TESLACAM_CACHE`              | `$TESLACAM_DATA/cache` | Put thumbnails and merged videos on another disk               |
+| `TESLACAM_ARCHIVE_ROOT`       | –                      | A second clip folder to keep events in for good (see below)    |
 | `TESLACAM_PASSWORD`           | –                      | Preset the password on first start instead of the setup screen |
 | `TESLACAM_ALLOW_REMOTE_SETUP` | `false`                | Allow first-time setup from outside the local network          |
 | `TESLACAM_FFMPEG`             | –                      | Folder with `ffmpeg` and `ffprobe`, instead of the `PATH`      |
 | `TZ`                          | UTC                    | Used for working hours and "recent" rules                      |
+
+### An archive folder next to the car's drive
+
+If `TESLACAM_ROOT` is a drive you bring in from the car (a USB SSD plugged into the NAS, say), set
+`TESLACAM_ARCHIVE_ROOT` to a folder on permanent storage and mount it too:
+
+```yaml
+    environment:
+      - TESLACAM_ARCHIVE_ROOT=/archive
+    volumes:
+      - /mnt/usb/TeslaCam:/teslacam
+      - /volume1/TeslaCam:/archive
+```
+
+Events from both folders are listed together. **Archive** on an event (or on a selection) copies it into the
+archive's `SentryClips`, `SavedClips` or `RecentClips`, with its event.json and thumbnail; the drive keeps its own
+copy. The event keeps its notes, favorite and collections and is shown from the archive from then on, with an
+Archive badge; Filters → Where shows either side. Each folder is read on its own, so unplugging the drive never
+removes archived events, and an event already in the archive with different files is never overwritten. Progress
+shows in Admin → Processing.
 
 Everything else is in Admin → Settings, in both versions: merged videos (which events, resolution, quality,
 frame rate, encoder), working hours, HEVC copies, scan interval, trash retention, trimming, Sentry at home,

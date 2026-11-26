@@ -315,7 +315,8 @@ export function Player({ detail, previewJob, onGeneratePreview, range, onRangeCh
                   )}
                   <span
                     className={cx(
-                      'pointer-events-none absolute bottom-1.5 left-1.5 rounded bg-black/65 px-1.5 py-0.5 font-semibold tracking-wide',
+                      // White on its own dark chip whatever the theme: it sits on the video, not the page.
+                      'pointer-events-none absolute bottom-1.5 left-1.5 rounded bg-black/65 px-1.5 py-0.5 font-semibold tracking-wide text-white',
                       isMain ? 'text-xs sm:bottom-3 sm:left-3' : 'text-[10px]',
                     )}
                   >
@@ -368,7 +369,8 @@ export function Player({ detail, previewJob, onGeneratePreview, range, onRangeCh
                   className="group/cell relative ring-white/0 transition-all ring-inset hover:ring-1 hover:ring-white/50"
                 >
                   {camera && (
-                    <span className="absolute bottom-1.5 left-1.5 rounded bg-black/65 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide sm:text-xs">
+                    // The driving data sits centred along the bottom edge, where it would cover the labels of the lower cells.
+                    <span className={cx('absolute left-1.5 rounded bg-black/65 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-white sm:text-xs', hud ? 'top-1.5' : 'bottom-1.5')}>
                       {cameraShort(camera)}
                     </span>
                   )}

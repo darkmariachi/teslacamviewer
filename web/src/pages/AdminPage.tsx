@@ -21,9 +21,10 @@ const KIND_LABEL: Record<JobKind, string> = {
   preview: 'Merged videos',
   transcode: 'Compatible copies',
   export: 'Exports',
+  archive: 'Copies to the archive',
 }
 
-const KIND_SHORT: Record<JobKind, string> = { probe: 'Details', thumbnail: 'Thumbnail', preview: 'Merge', transcode: 'Transcode', export: 'Export' }
+const KIND_SHORT: Record<JobKind, string> = { probe: 'Details', thumbnail: 'Thumbnail', preview: 'Merge', transcode: 'Transcode', export: 'Export', archive: 'Archive' }
 
 export default function AdminPage() {
   const [params, setParams] = useSearchParams()
@@ -410,6 +411,7 @@ function Library({ overview, libraryFolder }: { overview: Overview; libraryFolde
           </p>
         )}
         {libraryFolder && <LibraryFolder path={libraryFolder} />}
+        <ArchiveFolder />
         {!storage.clipsWritable && (
           <p className="mt-4 flex items-start gap-2 text-[13px] text-warn">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" /> The clip folder is read-only, so deleting events is not possible.
@@ -430,9 +432,29 @@ function Library({ overview, libraryFolder }: { overview: Overview; libraryFolde
           <p className="tabular mt-5 border-t border-line pt-4 text-[13px] text-dim">
             Clip drive: {formatBytes(storage.clips.freeBytes)} free of {formatBytes(storage.clips.totalBytes)} ({Math.round((used / storage.clips.totalBytes) * 100)}% used)
             {storage.data && storage.data.totalBytes !== storage.clips.totalBytes && <> · Data drive: {formatBytes(storage.data.freeBytes)} free</>}
+            {storage.archive && <> · Archive drive: {formatBytes(storage.archive.freeBytes)} free of {formatBytes(storage.archive.totalBytes)}</>}
           </p>
         )}
       </Card>
+    </div>
+  )
+}
+
+/** Where archived events are copied to, when the server has an archive folder (TESLACAM_ARCHIVE_ROOT). */
+function ArchiveFolder() {
+  const archive = useQuery(authQuery).data?.archive
+  if (!archive) return null
+  return (
+    <div className="mt-5 border-t border-line pt-5">
+      <p className="label">Archive folder</p>
+      <p className="mt-1 text-sm break-all">{archive.folder}</p>
+      <p className={cx('mt-1 text-xs', archive.writable ? 'text-faint' : 'text-warn')}>
+        {!archive.available
+          ? "Not available right now. Archived events stay listed and come back when it does."
+          : !archive.writable
+            ? "Can't be written to, so events can't be copied in. Check the folder's permissions."
+            : 'Events copied here with Archive stay when the main clip folder is unplugged or cleared.'}
+      </p>
     </div>
   )
 }

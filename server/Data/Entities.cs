@@ -2,7 +2,7 @@ namespace TeslaCam.Data;
 
 public enum EventType { Sentry, Saved, Recent }
 
-public enum JobKind { Probe, Thumbnail, Preview, Transcode, Export }
+public enum JobKind { Probe, Thumbnail, Preview, Transcode, Export, Archive }
 
 public enum JobStatus { Queued, Running, Done, Failed, Canceled }
 
@@ -13,8 +13,10 @@ public class Event
     public EventType Type { get; set; }
     /// <summary>Folder name for Sentry/Saved, synthetic name for Recent.</summary>
     public string Name { get; set; } = "";
-    /// <summary>Directory holding the clips, relative to the clip root.</summary>
+    /// <summary>Directory holding the clips, relative to the clip root (the archive's, when <see cref="Archived"/>).</summary>
     public string RelPath { get; set; } = "";
+    /// <summary>The clips live in the archive folder (TESLACAM_ARCHIVE_ROOT) rather than the main one.</summary>
+    public bool Archived { get; set; }
     /// <summary>Set while the event sits in the trash; replaces RelPath for file access.</summary>
     public string? TrashPath { get; set; }
     public DateTime? TrashedAt { get; set; }

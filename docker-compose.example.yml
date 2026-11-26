@@ -14,6 +14,9 @@ services:
       - /path/to/teslacam:/teslacam
       # Database, login keys, thumbnails, merged videos and exports.
       - ./data:/data
+      # Optional: a permanent archive next to a drive you bring in from the car. Also set
+      # TESLACAM_ARCHIVE_ROOT=/archive under environment; "Archive" on an event then copies it here.
+      # - /path/to/archive:/archive
     ports:
       - 7544:8080
     # Optional: hardware encoding on Intel graphics. Remove both blocks if the host has no /dev/dri.

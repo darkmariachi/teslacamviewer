@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Check, LayoutGrid, MapPin, Star, StickyNote, Video } from 'lucide-react'
+import { Archive, Check, LayoutGrid, MapPin, Star, StickyNote, Video } from 'lucide-react'
 import { eventClipUrl, thumbUrl, type EventSummary } from '../api'
 import { cx, eventTitle, formatClock, formatTime, TYPE_LABEL, placeOf } from '../lib/format'
 
@@ -52,9 +52,15 @@ export function EventCard({ event, selecting, selected, onToggleSelect, onToggle
           >
             {TYPE_LABEL[event.type]}
           </span>
+          {event.archived && (
+            <span className="inline-flex h-5 items-center gap-1 rounded-md bg-black/65 px-1.5 text-[10px] font-bold tracking-wider text-white uppercase" title="In the archive folder">
+              <Archive className="size-3" />
+              Archive
+            </span>
+          )}
         </div>
 
-        <div className="tabular absolute right-2.5 bottom-2.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] font-semibold">
+        <div className="tabular absolute right-2.5 bottom-2.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] font-semibold text-white">
           {formatClock(event.durationSec)}
         </div>
         <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1.5 text-white/80">

@@ -2,10 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  AlertTriangle, ArrowLeft, ChevronLeft, ChevronRight, Download, ExternalLink, FolderPlus, LayoutGrid, MapPin, MoreHorizontal,
+  AlertTriangle, Archive, ArrowLeft, ChevronLeft, ChevronRight, Download, ExternalLink, FolderPlus, LayoutGrid, MapPin, MoreHorizontal,
   House, RefreshCw, Scissors, Star, Trash2, X,
 } from 'lucide-react'
-import { api, type DriveData, type EventDetail, type Job } from '../api'
+import { api, authQuery, type DriveData, type EventDetail, type Job } from '../api'
 import {
   cameraLabel, cameraShort, cx, eventTitle, formatBytes, formatClock, formatDay, formatDuration, formatTime, placeOf, TYPE_LABEL,
 } from '../lib/format'
@@ -61,6 +61,7 @@ export default function EventPage() {
     retry: false,
   })
   const route = useMemo(() => routeOf(drive.data), [drive.data])
+  const archive = useQuery(authQuery).data?.archive ?? null
 
   // Where playback is, a few times a second, so the map can follow the car without redrawing the page every frame.
   const [position, setPosition] = useState(0)
@@ -98,6 +99,8 @@ export default function EventPage() {
   const job = (kind: Job['kind']) => detail.jobs.find((j) => j.kind === kind)
   const previewJob = job('preview')
   const transcodeJob = job('transcode')
+  const archiveJob = job('archive')
+  const canArchive = !!archive && !summary.archived && !summary.trashedAt
   const unplayable = detail.segments.flatMap((s) => s.files).filter((f) => !f.playable)
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['event', id] })
   const setDetail = (patch: (d: EventDetail) => EventDetail) => queryClient.setQueryData<EventDetail>(['event', id], (d) => d && patch(d))
@@ -169,6 +172,24 @@ export default function EventPage() {
                   Make compatible copies
                 </Button>
               )}
+            </Card>
+          )}
+
+          {canArchive && (isActive(archiveJob) || archiveJob?.status === 'failed') && (
+            <Card className="flex flex-wrap items-center gap-3 p-4">
+              <Archive className="size-5 shrink-0 text-dim" />
+              <div className="min-w-0 flex-1 text-sm">
+                {isActive(archiveJob) ? (
+                  <>
+                    <p className="font-medium">{archiveJob!.status === 'running' ? 'Copying to the archive…' : 'Waiting to copy to the archive…'}</p>
+                    <div className="mt-2 max-w-xs">
+                      <ProgressBar value={archiveJob!.progress} />
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-accent-hover">Copying to the archive failed: {archiveJob!.error}</p>
+                )}
+              </div>
             </Card>
           )}
 
@@ -272,6 +293,7 @@ export default function EventPage() {
                 <div className="mb-2 flex flex-wrap gap-1.5">
                   <Badge tone={summary.type === 'sentry' ? 'accent' : summary.type === 'saved' ? 'neutral' : 'blue'}>{TYPE_LABEL[summary.type].toUpperCase()}</Badge>
                   {summary.hasPreview && <Badge tone="ok">MERGED</Badge>}
+                  {summary.archived && <Badge tone="neutral">ARCHIVED</Badge>}
                 </div>
                 <h1 className="text-xl leading-tight font-semibold">{eventTitle(summary)}</h1>
                 <p className="mt-1.5 text-sm text-dim">{formatDay(summary.triggerTime ?? summary.startTime)}</p>
@@ -280,6 +302,16 @@ export default function EventPage() {
                 </p>
               </div>
               <div className="flex shrink-0 items-center">
+                {canArchive && !isActive(archiveJob) && (
+                  <IconButton
+                    label={archive.writable ? 'Copy to the archive' : `The archive folder ${archive.folder} can't be written to right now`}
+                    disabled={!archive.writable}
+                    onClick={() => run(() => api.archiveEvent(id))}
+                    className="disabled:opacity-30"
+                  >
+                    <Archive className="size-5" />
+                  </IconButton>
+                )}
                 <IconButton label={summary.favorite ? 'Remove from favorites' : 'Add to favorites'} onClick={toggleFavorite} className={summary.favorite ? '!text-warn' : ''}>
                   <Star className="size-5" fill={summary.favorite ? 'currentColor' : 'none'} />
                 </IconButton>

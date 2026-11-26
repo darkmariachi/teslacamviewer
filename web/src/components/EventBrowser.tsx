@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useInfiniteQuery, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query'
-import { CheckSquare, FolderPlus, LayoutGrid, Scissors, Search, SlidersHorizontal, Star, Trash2, VideoOff, X } from 'lucide-react'
-import { api, type EventFilters, type EventSummary, type EventType, type Page } from '../api'
+import { Archive, CheckSquare, FolderPlus, LayoutGrid, Scissors, Search, SlidersHorizontal, Star, Trash2, VideoOff, X } from 'lucide-react'
+import { api, authQuery, type EventFilters, type EventSummary, type EventType, type Page } from '../api'
 import { cx, dayKey, formatDay, reasonLabel } from '../lib/format'
 import { Button, ConfirmDialog, EmptyState, Segmented, inputClass } from './ui'
 import { EventCard } from './EventCard'
@@ -26,6 +26,7 @@ export function useEventFilters(fixed: EventFilters = {}): [EventFilters, (patch
     from: params.get('from') ?? undefined,
     to: params.get('to') ?? undefined,
     q: params.get('q') ?? undefined,
+    where: (params.get('where') as EventFilters['where'] | null) ?? undefined,
     sort: (params.get('sort') as EventFilters['sort'] | null) ?? undefined,
     ...fixed,
   }
@@ -58,6 +59,9 @@ export function EventBrowser({ fixed, empty, extraBulk }: Props) {
   const [dialog, setDialog] = useState<'collect' | 'trim' | 'trash' | null>(null)
 
   const facets = useQuery({ queryKey: ['facets'], queryFn: api.facets })
+  // With an archive folder, events can be copied into it and the list can show either side.
+  const archive = useQuery(authQuery).data?.archive ?? null
+  const [archiveNote, setArchiveNote] = useState<string | null>(null)
   const list = useInfiniteQuery({
     queryKey: ['events', filters],
     queryFn: ({ pageParam }) => api.events(filters, pageParam),
@@ -102,7 +106,7 @@ export function EventBrowser({ fixed, empty, extraBulk }: Props) {
     return [...map.entries()].map(([key, items]) => ({ key, title: formatDay(items[0].startTime), items }))
   }, [events, filters.sort])
 
-  const activeFilterCount = [filters.reason, filters.city, filters.from, filters.to, filters.sort && filters.sort !== 'newest'].filter(Boolean).length
+  const activeFilterCount = [filters.reason, filters.city, filters.from, filters.to, filters.where, filters.sort && filters.sort !== 'newest'].filter(Boolean).length
   const anyFilter = activeFilterCount > 0 || !!filters.type || !!filters.favorite || !!filters.q
 
   function patchCached(ids: number[], patch: Partial<EventSummary>) {
@@ -188,7 +192,14 @@ export function EventBrowser({ fixed, empty, extraBulk }: Props) {
       </div>
 
       {showFilters && (
-        <div className="rise mt-3 grid grid-cols-2 gap-3 rounded-card border border-line bg-panel p-4 md:grid-cols-5">
+        <div className={cx('rise mt-3 grid grid-cols-2 gap-3 rounded-card border border-line bg-panel p-4', archive ? 'md:grid-cols-6' : 'md:grid-cols-5')}>
+          {archive && (
+            <FilterSelect label="Where" value={filters.where ?? ''} onChange={(v) => update({ where: (v || undefined) as EventFilters['where'] })}>
+              <option value="">Everywhere</option>
+              <option value="main">Not archived</option>
+              <option value="archive">In the archive ({facets.data?.archived ?? 0})</option>
+            </FilterSelect>
+          )}
           <FilterSelect label="Reason" value={filters.reason ?? ''} onChange={(v) => update({ reason: v || undefined })}>
             <option value="">Any reason</option>
             {facets.data?.reasons.map((r) => (
@@ -220,6 +231,16 @@ export function EventBrowser({ fixed, empty, extraBulk }: Props) {
               </option>
             ))}
           </FilterSelect>
+        </div>
+      )}
+
+      {archiveNote && (
+        <div className="rise mt-3 flex items-center gap-3 rounded-card border border-line bg-panel px-4 py-3 text-sm">
+          <Archive className="size-4 shrink-0 text-dim" />
+          <span className="flex-1">{archiveNote}</span>
+          <button onClick={() => setArchiveNote(null)} aria-label="Dismiss" className="text-dim hover:text-fg">
+            <X className="size-4" />
+          </button>
         </div>
       )}
 
@@ -304,6 +325,25 @@ export function EventBrowser({ fixed, empty, extraBulk }: Props) {
             <Button size="sm" disabled={!ids.length} icon={<Scissors className="size-4" />} onClick={() => setDialog('trim')}>
               Trim
             </Button>
+            {archive && (
+              <Button
+                size="sm"
+                disabled={!ids.length || !archive.writable}
+                title={archive.writable ? 'Copy these events into the archive folder' : `The archive folder ${archive.folder} can't be written to right now`}
+                icon={<Archive className="size-4" />}
+                onClick={async () => {
+                  try {
+                    await api.bulk(ids, 'archive')
+                    setArchiveNote('Copying to the archive. Progress is under Admin → Processing; events already archived were skipped.')
+                  } catch (e) {
+                    setArchiveNote(e instanceof Error ? e.message : 'Could not start the copy')
+                  }
+                  stopSelecting()
+                }}
+              >
+                Archive
+              </Button>
+            )}
             {extraBulk?.(ids, () => { refresh(); stopSelecting() })}
             <Button size="sm" variant="danger" disabled={!ids.length} icon={<Trash2 className="size-4" />} onClick={() => setDialog('trash')}>
               Delete

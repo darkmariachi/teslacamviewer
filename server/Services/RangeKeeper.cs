@@ -32,7 +32,7 @@ public class RangeKeeper(IDbContextFactory<AppDb> dbf, AppPaths paths, Ffmpeg ff
         await runner.StopEventJobsAsync(eventId);
 
         var dir = paths.EventDir(ev);
-        var trash = Path.Combine(paths.TrashDir, TrashService.SegmentsDir, $"{ev.Name}_{DateTime.UtcNow:yyyyMMddHHmmss}");
+        var trash = Path.Combine(paths.TrashDirFor(ev), TrashService.SegmentsDir, $"{ev.Name}_{DateTime.UtcNow:yyyyMMddHHmmss}");
         var work = Path.Combine(trash, ".cut");
         Directory.CreateDirectory(work);
         var before = ev.Segments.SelectMany(s => s.Files).Sum(f => f.SizeBytes);
