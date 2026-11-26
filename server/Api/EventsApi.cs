@@ -10,7 +10,7 @@ public static class EventsApi
 {
     public record PatchEvent(bool? Favorite, string? Notes);
     public record ProcessRequest(string Kind);
-    public record ExportRequest(string Camera, double Start, double End);
+    public record ExportRequest(string Camera, double Start, double End, bool? Hud, string? SpeedUnit);
     public record KeepRequest(double Start, double End);
     public record BulkRequest(int[] Ids, string Action, int? CollectionId);
 
@@ -207,7 +207,7 @@ public static class EventsApi
             if (req.Camera != "grid" && !Cameras.Parse(ev.Cameras).Contains(req.Camera))
                 return Results.BadRequest(new { error = "Unknown camera." });
             if (req.End - req.Start < 1) return Results.BadRequest(new { error = "Pick a range of at least one second." });
-            var args = JsonSerializer.Serialize(new ExportArgs(req.Camera, req.Start, req.End), JsonSerializerOptions.Web);
+            var args = JsonSerializer.Serialize(new ExportArgs(req.Camera, req.Start, req.End, req.Hud == true && ev.HasDriveData, req.SpeedUnit == "kmh" ? "kmh" : "mph"), JsonSerializerOptions.Web);
             var job = await queue.RequestAsync(id, JobKind.Export, args);
             return Results.Ok(Dto.JobDto(job, queue));
         });

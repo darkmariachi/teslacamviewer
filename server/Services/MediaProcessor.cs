@@ -5,7 +5,11 @@ using TeslaCam.Data;
 
 namespace TeslaCam.Services;
 
-public record ExportArgs(string Camera, double Start, double End);
+/// <summary>What to export. Hud draws the car's driving data over the video, in mph or km/h.</summary>
+public record ExportArgs(string Camera, double Start, double End, bool Hud = false, string? SpeedUnit = null);
+
+/// <summary>The driving data to draw over an export.</summary>
+internal record HudOptions(List<DriveDataSegment> Data, bool Mph);
 
 /// <summary>The work behind each job kind: probing, thumbnails, merged previews, transcodes and exports.</summary>
 public class MediaProcessor(IDbContextFactory<AppDb> dbf, AppPaths paths, Ffmpeg ffmpeg, SettingsService settings, JobQueue queue)
@@ -204,14 +208,18 @@ public class MediaProcessor(IDbContextFactory<AppDb> dbf, AppPaths paths, Ffmpeg
 
         var s = settings.Current;
         var output = paths.Export(job.Id);
+        var driveFile = paths.DriveData(ev.Id);
+        var hud = args.Hud && ev.HasDriveData && File.Exists(driveFile)
+            ? new HudOptions(DriveDataSegment.Load(driveFile), args.SpeedUnit != "kmh")
+            : null;
         if (args.Camera == "grid")
         {
             var (cells, columns) = Cameras.GridLayout(Cameras.Parse(ev.Cameras));
-            await BuildAsync(ev, cells, columns, ranges, output, 720, 30, 23, progress, ct);
+            await BuildAsync(ev, cells, columns, ranges, output, 720, 30, 23, progress, ct, hud);
         }
         else
         {
-            await BuildAsync(ev, [args.Camera], 1, ranges, output, null, 30, 21, progress, ct);
+            await BuildAsync(ev, [args.Camera], 1, ranges, output, null, 30, 21, progress, ct, hud);
         }
     }
 
@@ -222,7 +230,7 @@ public class MediaProcessor(IDbContextFactory<AppDb> dbf, AppPaths paths, Ffmpeg
     /// Working per segment keeps cameras aligned even when a file is missing or lengths differ.
     /// </summary>
     private async Task BuildAsync(Event ev, string[] cells, int columns, List<PartRange> ranges, string output,
-        int? cellHeight, int fps, int quality, Action<double> progress, CancellationToken ct)
+        int? cellHeight, int fps, int quality, Action<double> progress, CancellationToken ct, HudOptions? hud = null)
     {
         if (ranges.Count == 0) throw new InvalidOperationException("Nothing to encode");
         var encoder = await ffmpeg.ResolveEncoderAsync(ct);
@@ -239,9 +247,10 @@ public class MediaProcessor(IDbContextFactory<AppDb> dbf, AppPaths paths, Ffmpeg
                 var range = ranges[i];
                 var part = Path.Combine(workDir, $"part_{i:000}.mp4");
                 var before = finished;
+                var overlay = hud != null ? await HudFilterAsync(hud, range, FrameSize(cells, columns, range, cellHeight), Path.Combine(workDir, $"part_{i:000}.ass"), ct) : null;
                 var args = cells.Length == 1
-                    ? SingleArgs(ev, cells[0], range, encoder, cellHeight, fps, quality, part)
-                    : GridArgs(ev, cells, columns, range, encoder, cellHeight ?? 480, fps, quality, part);
+                    ? SingleArgs(ev, cells[0], range, encoder, cellHeight, fps, quality, part, overlay)
+                    : GridArgs(ev, cells, columns, range, encoder, cellHeight ?? 480, fps, quality, part, overlay);
                 if (args == null) continue;
                 await ffmpeg.RunAsync(args, sec => progress(Math.Min(0.99, (before + Math.Min(range.Duration, sec)) / total)), ct);
                 finished += range.Duration;
@@ -262,7 +271,33 @@ public class MediaProcessor(IDbContextFactory<AppDb> dbf, AppPaths paths, Ffmpeg
         }
     }
 
-    private List<string>? SingleArgs(Event ev, string camera, PartRange range, string encoder, int? height, int fps, int quality, string output)
+    /// <summary>The size of the frames a part comes out at, so the HUD can be laid out in pixels.</summary>
+    private static (int Width, int Height) FrameSize(string[] cells, int columns, PartRange range, int? cellHeight)
+    {
+        if (cells.Length > 1)
+        {
+            var h = cellHeight ?? 480;
+            return (h * 4 / 3 * columns, h * (int)Math.Ceiling(cells.Length / (double)columns));
+        }
+        var file = range.Segment.Files.FirstOrDefault(f => f.Camera == cells[0]);
+        int w = file?.Width ?? 1280, srcH = file?.Height ?? 960;
+        if (cellHeight is not { } height) return (w, srcH);
+        // scale=-2:h keeps the aspect and rounds the width to even.
+        return ((int)Math.Round(w * (double)height / srcH / 2) * 2, height);
+    }
+
+    /// <summary>Writes the HUD for one part as a subtitle file and returns the filter that burns it in, or null without data.</summary>
+    private static async Task<string?> HudFilterAsync(HudOptions hud, PartRange range, (int Width, int Height) size, string assPath, CancellationToken ct)
+    {
+        var seg = hud.Data.FirstOrDefault(d => d.Index == range.Segment.Index);
+        var ass = seg == null ? null : HudSubtitles.Build(seg, range.Start, range.Duration, size.Width, size.Height, hud.Mph);
+        if (ass == null) return null;
+        await File.WriteAllTextAsync(assPath, ass, ct);
+        // Filter option values need their colons escaped (C:/ on Windows) and the whole path quoted.
+        return $"ass=filename='{assPath.Replace('\\', '/').Replace(":", "\\:")}'";
+    }
+
+    private List<string>? SingleArgs(Event ev, string camera, PartRange range, string encoder, int? height, int fps, int quality, string output, string? overlay = null)
     {
         var file = range.Segment.Files.FirstOrDefault(f => f.Camera == camera);
         if (file == null) return null;
@@ -271,12 +306,12 @@ public class MediaProcessor(IDbContextFactory<AppDb> dbf, AppPaths paths, Ffmpeg
         [
             .. Ffmpeg.GlobalArgs(encoder),
             "-ss", F(range.Start), "-t", F(range.Duration), "-i", paths.ClipPath(ev, file),
-            "-vf", $"fps={fps},{scale}setsar=1,{Ffmpeg.FilterTail(encoder)}",
+            "-vf", $"fps={fps},{scale}setsar=1,{(overlay != null ? overlay + "," : "")}{Ffmpeg.FilterTail(encoder)}",
             .. ffmpeg.EncodeArgs(encoder, quality, fps), "-an", output,
         ];
     }
 
-    private List<string> GridArgs(Event ev, string[] cells, int columns, PartRange range, string encoder, int cellHeight, int fps, int quality, string output)
+    private List<string> GridArgs(Event ev, string[] cells, int columns, PartRange range, string encoder, int cellHeight, int fps, int quality, string output, string? overlay = null)
     {
         var cellWidth = cellHeight * 4 / 3;
         var args = new List<string>(Ffmpeg.GlobalArgs(encoder));
@@ -299,7 +334,7 @@ public class MediaProcessor(IDbContextFactory<AppDb> dbf, AppPaths paths, Ffmpeg
             layout.Add($"{i % columns * cellWidth}_{i / columns * cellHeight}");
         }
         var inputs = string.Concat(Enumerable.Range(0, cells.Length).Select(i => $"[c{i}]"));
-        filter.Add($"{inputs}xstack=inputs={cells.Length}:layout={string.Join('|', layout)}:fill=black,{Ffmpeg.FilterTail(encoder)}[out]");
+        filter.Add($"{inputs}xstack=inputs={cells.Length}:layout={string.Join('|', layout)}:fill=black,{(overlay != null ? overlay + "," : "")}{Ffmpeg.FilterTail(encoder)}[out]");
         args.AddRange(["-filter_complex", string.Join(';', filter), "-map", "[out]", "-t", F(range.Duration)]);
         args.AddRange(ffmpeg.EncodeArgs(encoder, quality, fps));
         args.AddRange(["-an", output]);

@@ -44,7 +44,8 @@ Your clips stay on your own computer. There is no account, no cloud and no telem
 - Every Sentry event, saved clip and drive as a card with a thumbnail, reason, place and time
 - One timeline per event instead of one-minute files, with every camera playing in sync and the trigger marked
 - The car's own driving data over the video (speed, gear, pedals, steering, turn signals, Autopilot, heading and
-  g-force) for clips recorded on recent Tesla software, with the route on a map that follows playback
+  g-force) for clips recorded on recent Tesla software, with the route on a map that follows playback, and
+  optionally drawn into exported clips
 - Import from the car's USB drive, skipping what you already have, and optionally clear the drive afterwards
 - Hover a card to play the car's own few seconds around the trigger, on cars new enough to save them
 - Merged grid videos that play well on a phone and are easy to share, plus clip export from any range

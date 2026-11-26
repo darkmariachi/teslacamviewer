@@ -14,6 +14,7 @@ import { Player } from '../components/Player'
 import { MiniMap } from '../components/MiniMap'
 import { RouteMap } from '../components/RouteMap'
 import { momentAt, routeOf } from '../lib/drive'
+import { usePrefs } from '../lib/prefs'
 import { CollectionPicker } from '../components/CollectionPicker'
 
 const isActive = (job?: Job) => job?.status === 'queued' || job?.status === 'running'
@@ -38,6 +39,9 @@ export default function EventPage() {
   const queryClient = useQueryClient()
   const [range, setRange] = useState<[number, number] | null>(null)
   const [exportCamera, setExportCamera] = useState('grid')
+  const prefs = usePrefs()
+  // Exports carry the HUD when the player shows it, unless changed here.
+  const [exportHud, setExportHud] = useState(prefs.hud)
   const [dialog, setDialog] = useState<'collect' | 'trim' | 'trash' | 'keep' | { segment: number } | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -185,12 +189,18 @@ export default function EventPage() {
                   </option>
                 ))}
               </select>
+              {summary.hasDriveData && (
+                <label className="flex items-center gap-2 text-[13px] text-dim" title="Draw the speed, gear, pedals, steering and g-force over the exported video">
+                  <input type="checkbox" checked={exportHud} onChange={(e) => setExportHud(e.target.checked)} className="size-4 accent-blue" />
+                  Driving data
+                </label>
+              )}
               <Button
                 variant="primary"
                 icon={<Download className="size-4" />}
                 onClick={() =>
                   run(async () => {
-                    await api.exportClip(id, exportCamera, range[0], range[1])
+                    await api.exportClip(id, exportCamera, range[0], range[1], exportHud && summary.hasDriveData ? { speedUnit: prefs.speedUnit } : undefined)
                     setRange(null)
                   })
                 }
@@ -535,12 +545,12 @@ function Fact({ label, value }: { label: string; value: string }) {
 }
 
 function ExportRow({ job }: { job: Job }) {
-  const args = job.args ? (JSON.parse(job.args) as { camera: string; start: number; end: number }) : null
+  const args = job.args ? (JSON.parse(job.args) as { camera: string; start: number; end: number; hud?: boolean }) : null
   return (
     <li className="flex items-center gap-3 py-2.5 text-sm">
       <div className="tabular min-w-0 flex-1">
         <p className="font-medium">
-          {args ? `${cameraLabel(args.camera)} · ${formatClock(args.start)} – ${formatClock(args.end)}` : `Export ${job.id}`}
+          {args ? `${cameraLabel(args.camera)} · ${formatClock(args.start)} – ${formatClock(args.end)}${args.hud ? ' · with driving data' : ''}` : `Export ${job.id}`}
         </p>
         {job.status === 'running' && (
           <div className="mt-1.5 max-w-52">

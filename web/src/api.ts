@@ -575,8 +575,8 @@ export const api = {
   keepRange: (id: number, start: number, end: number) =>
     request<{ bytes: number }>('POST', `/api/events/${id}/keep`, { start, end }),
   process: (id: number, kind: JobKind) => request<Job>('POST', `/api/events/${id}/process`, { kind }),
-  exportClip: (id: number, camera: string, start: number, end: number) =>
-    request<Job>('POST', `/api/events/${id}/export`, { camera, start, end }),
+  exportClip: (id: number, camera: string, start: number, end: number, hud?: { speedUnit: 'mph' | 'kmh' }) =>
+    request<Job>('POST', `/api/events/${id}/export`, { camera, start, end, hud: !!hud, speedUnit: hud?.speedUnit }),
   bulk: (ids: number[], action: 'favorite' | 'unfavorite' | 'collect' | 'preview' | 'trim' | 'trash', collectionId?: number) =>
     request<void>('POST', '/api/events/bulk', { ids, action, collectionId }),
 

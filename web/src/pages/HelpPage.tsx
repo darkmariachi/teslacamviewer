@@ -138,6 +138,10 @@ export default function HelpPage() {
                 while parked, and clips from older software, have none.
               </li>
               <li>
+                Exports can carry the driving data too: tick <strong>Driving data</strong> next to the Export button. It is
+                drawn into the video in the same place, in mph or km/h as set under Appearance.
+              </li>
+              <li>
                 Drives and other events with driving data also get their route on the event's map, with a dot that follows
                 the car as the video plays. Drives have no event.json, so they take their start and end from it, and borrow
                 the place name of the nearest event that has one.

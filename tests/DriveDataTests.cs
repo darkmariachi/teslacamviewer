@@ -144,6 +144,58 @@ public sealed class DriveDataTests : IDisposable
         Assert.Null(await EventDriveData.NearestCityAsync(db, 0, Lat - 1, Lon, CancellationToken.None));
     }
 
+    private static DriveDataSegment Segment(int count, double step, Func<int, int> blinker)
+    {
+        var range = Enumerable.Range(0, count).ToArray();
+        return new DriveDataSegment
+        {
+            Index = 0,
+            T = range.Select(i => Math.Round(i * step, 2)).ToArray(),
+            Speed = range.Select(_ => 10.0).ToArray(),
+            Gear = range.Select(_ => 1).ToArray(),
+            Pedal = range.Select(_ => 30.0).ToArray(),
+            Steer = range.Select(i => (double)i).ToArray(),
+            Brake = range.Select(_ => 0).ToArray(),
+            Blinker = range.Select(blinker).ToArray(),
+            Autopilot = range.Select(_ => 0).ToArray(),
+            Heading = range.Select(_ => 90.0).ToArray(),
+            Accel = range.Select(_ => 0.5).ToArray(),
+            Lateral = range.Select(_ => 0.0).ToArray(),
+        };
+    }
+
+    [Fact]
+    public void Hud_shows_speed_in_the_chosen_unit_and_lights_the_gear()
+    {
+        var seg = Segment(50, 0.1, _ => 0);
+
+        var mph = HudSubtitles.Build(seg, 0, 5, 1280, 960, mph: true)!;
+        var kmh = HudSubtitles.Build(seg, 0, 5, 1280, 960, mph: false)!;
+
+        Assert.Contains("PlayResX: 1280", mph);
+        Assert.Contains("}22", mph);   // 10 m/s
+        Assert.Contains("}36", kmh);
+        Assert.Contains("km/h", kmh);
+        // D is the lit one: full white right before it.
+        Assert.Contains(@"\1c&HFFFFFF&\1a&H00&}D", mph);
+    }
+
+    [Fact]
+    public void Hud_flashes_a_turn_signal_even_when_readings_land_on_flash_boundaries()
+    {
+        // Readings exactly one flash apart used to round back onto the same boundary and never finish.
+        var seg = Segment(40, 0.35, _ => 1);
+
+        var ass = HudSubtitles.Build(seg, 0, 13, 1280, 960, mph: true)!;
+
+        var green = ass.Split('\n').Count(l => l.Contains("&H58D130&"));
+        Assert.InRange(green, 15, 25);
+    }
+
+    [Fact]
+    public void Hud_is_skipped_for_a_stretch_without_data() =>
+        Assert.Null(HudSubtitles.Build(Segment(10, 0.1, _ => 0), 30, 5, 1280, 960, mph: true));
+
     // ---- building test clips ----
 
     private static byte[] Frame(int gear = 1, float speed = 0, float pedal = 0, float steering = 0, bool left = false, bool right = false,
