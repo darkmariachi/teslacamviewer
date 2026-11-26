@@ -60,7 +60,7 @@ export function EventCard({ event, selecting, selected, onToggleSelect, onToggle
           )}
         </div>
 
-        <div className="tabular absolute right-2.5 bottom-2.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] font-semibold">
+        <div className="tabular absolute right-2.5 bottom-2.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] font-semibold text-white">
           {formatClock(event.durationSec)}
         </div>
         <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1.5 text-white/80">
