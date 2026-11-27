@@ -27,8 +27,11 @@ public static class Dto
         e.HasDriveData,
         e.Reason,
         e.ReasonValue,
+        e.TriggerCamera,
         cameras = Cameras.Parse(e.Cameras),
         e.SegmentCount,
+        // Filled only where the query includes them (the event list and a single event).
+        collectionIds = e.Collections.Select(c => c.CollectionId),
         e.SizeBytes,
         e.Favorite,
         hasNotes = !string.IsNullOrEmpty(e.Notes),

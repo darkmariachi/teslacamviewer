@@ -740,6 +740,16 @@ function Appearance() {
           ]}
         />
       </Field>
+      <Field label="Event list" hint="How the home page and collections show events: thumbnails in a grid, or a list with each event's drive.">
+        <Segmented
+          value={prefs.eventView}
+          onChange={(view) => setPref('eventView', view)}
+          options={[
+            { value: 'grid', label: 'Grid' },
+            { value: 'list', label: 'List' },
+          ]}
+        />
+      </Field>
       <Row label="Show driving data over the video" hint="Speed, gear, pedals, steering, turn signals and g-force, from clips that carry them (recent car software, while driving). Press H in the player to switch it.">
         <Toggle checked={prefs.hud} onChange={(on) => setPref('hud', on)} label="Show driving data over the video" />
       </Row>

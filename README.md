@@ -42,6 +42,8 @@ Your clips stay on your own computer. There is no account, no cloud and no telem
 ## Features
 
 - Every Sentry event, saved clip and drive as a card with a thumbnail, reason, place and time
+- A list view as well as the grid, showing which drive each event happened during, with a sketch of the route
+  (drives come from car-logger)
 - One timeline per event instead of one-minute files, with every camera playing in sync and the trigger marked
 - The car's own driving data over the video (speed, gear, pedals, steering, turn signals, Autopilot, heading and
   g-force) for clips recorded on recent Tesla software, with the route on a map that follows playback, and
@@ -249,6 +251,8 @@ website can open, so they can't be shown here.
 
 - **Library.** Filter by type, reason, place and date, search names, places and notes, and sort by date,
   length or size. "Select" applies favorites, collections, merging, trimming or deletion to many events at once.
+  The buttons next to Select switch between a grid of thumbnails and a list; with car-logger the list also shows
+  the drive each event happened during.
 - **Player.** Click any camera to make it the main view, or switch to the merged grid. Playback starts just
   before the trigger, which is marked on the timeline.
 - **Exporting.** The scissors pick a range on the timeline; export it from one camera or as a grid.

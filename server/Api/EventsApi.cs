@@ -32,7 +32,7 @@ public static class EventsApi
             var size = Math.Clamp(pageSize ?? 48, 1, 200);
             var number = Math.Max(1, page ?? 1);
             var total = await query.CountAsync();
-            var items = await query.Skip((number - 1) * size).Take(size).ToListAsync();
+            var items = await query.Skip((number - 1) * size).Take(size).Include(e => e.Collections).ToListAsync();
             return Results.Ok(new { items = items.Select(Dto.Summary), total, page = number, pageSize = size });
         });
 
@@ -166,7 +166,7 @@ public static class EventsApi
 
         group.MapPatch("/{id:int}", async (int id, PatchEvent patch, AppDb db) =>
         {
-            var ev = await db.Events.FirstOrDefaultAsync(e => e.Id == id);
+            var ev = await db.Events.Include(e => e.Collections).FirstOrDefaultAsync(e => e.Id == id);
             if (ev == null) return Results.NotFound();
             if (patch.Favorite is { } favorite) ev.Favorite = favorite;
             if (patch.Notes != null) ev.Notes = patch.Notes.Trim() is { Length: > 0 } n ? n[..Math.Min(n.Length, 4000)] : null;

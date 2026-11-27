@@ -101,8 +101,11 @@ export function DriveRow({ drive: d }: { drive: CarDriveSummary }) {
   )
 }
 
-/** The route's shape, drawn small without a map, so a long list stays quick. */
-export function RouteSketch({ route, className }: { route: [number, number][]; className?: string }) {
+/**
+ * The route's shape, drawn small without a map, so a long list stays quick. marker (0 to 1) puts a dot that far
+ * along it, for something that happened during the drive.
+ */
+export function RouteSketch({ route, className, marker }: { route: [number, number][]; className?: string; marker?: number | null }) {
   if (route.length < 2) return <div className={className} />
   // Longitude degrees shrink away from the equator; scale them so the shape isn't stretched.
   const k = Math.cos((route[0][1] * Math.PI) / 180)
@@ -116,11 +119,18 @@ export function RouteSketch({ route, className }: { route: [number, number][]; c
   const d = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join('')
   const [sx, sy] = pts[0]
   const [ex, ey] = pts[pts.length - 1]
+  const [mx, my] = marker != null ? pts[Math.round(marker * (pts.length - 1))] : [0, 0]
   return (
     <svg viewBox="0 0 100 100" className={className} aria-hidden>
-      <path d={d} fill="none" stroke="var(--color-blue)" strokeWidth={5} strokeLinejoin="round" strokeLinecap="round" />
-      <circle cx={sx} cy={sy} r={6} fill="var(--color-blue)" stroke="var(--color-fg)" strokeWidth={2.5} />
-      <circle cx={ex} cy={ey} r={6} fill="var(--color-ink)" stroke="var(--color-fg)" strokeWidth={3} />
+      <path d={d} fill="none" stroke="var(--color-blue)" strokeWidth={5} strokeLinejoin="round" strokeLinecap="round" opacity={marker != null ? 0.5 : 1} />
+      {marker != null ? (
+        <circle cx={mx} cy={my} r={7} fill="var(--color-fg)" stroke="var(--color-ink)" strokeWidth={2.5} />
+      ) : (
+        <>
+          <circle cx={sx} cy={sy} r={6} fill="var(--color-blue)" stroke="var(--color-fg)" strokeWidth={2.5} />
+          <circle cx={ex} cy={ey} r={6} fill="var(--color-ink)" stroke="var(--color-fg)" strokeWidth={3} />
+        </>
+      )}
     </svg>
   )
 }

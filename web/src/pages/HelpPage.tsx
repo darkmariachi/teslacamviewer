@@ -130,6 +130,11 @@ export default function HelpPage() {
               <li>Every camera plays in sync on one timeline. Click a camera to make it the large view, or switch to Merged.</li>
               <li>The red mark on the timeline is the moment the car was triggered, and playback starts just before it.</li>
               <li>Hovering an event card plays the car's own few seconds around the trigger, when the car saved them.</li>
+              <li>
+                The two buttons next to Select show events as a grid of thumbnails or as a list. The list adds the trigger camera,
+                collections and, when the car's state is set up, the drive the event happened during, with a sketch of the route
+                and a dot where it happened. The choice is kept on this device, and is also under Admin → Settings → Appearance.
+              </li>
               <li>The scissors select a range to export, from one camera or as a grid, or to keep while the rest goes to the trash.</li>
               <li>
                 <strong>Driving data.</strong> Recent Tesla software writes the car's speed, gear, accelerator and brake, steering,
