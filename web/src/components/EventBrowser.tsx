@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useInfiniteQuery, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query'
-import { Archive, CheckSquare, FolderPlus, LayoutGrid, Scissors, Search, SlidersHorizontal, Star, Trash2, VideoOff, X } from 'lucide-react'
+import { Archive, CheckSquare, FolderPlus, LayoutGrid, Rows3, Scissors, Search, SlidersHorizontal, Star, Trash2, VideoOff, X } from 'lucide-react'
 import { api, authQuery, type EventFilters, type EventSummary, type EventType, type Page } from '../api'
 import { cx, dayKey, formatDay, reasonLabel } from '../lib/format'
 import { Button, ConfirmDialog, EmptyState, Segmented, inputClass } from './ui'
 import { EventCard } from './EventCard'
+import { EventRow } from './EventRow'
+import { useEventDrives } from '../lib/drives'
+import { setPref, usePrefs } from '../lib/prefs'
 import { CollectionPicker } from './CollectionPicker'
 
 const SORTS = [
@@ -59,6 +62,9 @@ export function EventBrowser({ fixed, empty, extraBulk }: Props) {
   const [dialog, setDialog] = useState<'collect' | 'trim' | 'trash' | null>(null)
 
   const facets = useQuery({ queryKey: ['facets'], queryFn: api.facets })
+  // Grid or list is a per-device choice, shared by every page that lists events.
+  const view = usePrefs().eventView
+  const driveFor = useEventDrives()
   // With an archive folder, events can be copied into it and the list can show either side.
   const archive = useQuery(authQuery).data?.archive ?? null
   const [archiveNote, setArchiveNote] = useState<string | null>(null)
@@ -128,6 +134,15 @@ export function EventBrowser({ fixed, empty, extraBulk }: Props) {
     }
   }
 
+  function toggleSelected(id: number) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
   function stopSelecting() {
     setSelecting(false)
     setSelected(new Set())
@@ -185,6 +200,28 @@ export function EventBrowser({ fixed, empty, extraBulk }: Props) {
         </button>
         <div className="ml-auto flex items-center gap-2">
           <span className="tabular text-[13px] text-faint">{list.isSuccess ? `${total.toLocaleString()} ${total === 1 ? 'event' : 'events'}` : ''}</span>
+          <div className="flex h-8 items-center rounded-lg border border-line bg-panel p-0.5" role="group" aria-label="Show events as">
+            {(
+              [
+                { value: 'grid', label: 'Grid', icon: LayoutGrid },
+                { value: 'list', label: 'List', icon: Rows3 },
+              ] as const
+            ).map(({ value, label, icon: Icon }) => (
+              <button
+                key={value}
+                onClick={() => setPref('eventView', value)}
+                aria-label={label}
+                aria-pressed={view === value}
+                title={label}
+                className={cx(
+                  'flex h-full w-8 items-center justify-center rounded-md transition-colors',
+                  view === value ? 'bg-hover text-fg' : 'text-faint hover:text-fg',
+                )}
+              >
+                <Icon className="size-4" />
+              </button>
+            ))}
+          </div>
           <Button size="sm" variant={selecting ? 'primary' : 'secondary'} icon={<CheckSquare className="size-4" />} onClick={() => (selecting ? stopSelecting() : setSelecting(true))}>
             {selecting ? 'Done' : 'Select'}
           </Button>
@@ -257,7 +294,7 @@ export function EventBrowser({ fixed, empty, extraBulk }: Props) {
       )}
 
       <div className="mt-5">
-        {list.isPending && <GridSkeleton />}
+        {list.isPending && <GridSkeleton list={view === 'list'} />}
         {list.isError && <EmptyState icon={<VideoOff className="size-6" />} title="Couldn't load events">{(list.error as Error).message}</EmptyState>}
         {list.isSuccess && events.length === 0 && (
           anyFilter ? (
@@ -278,29 +315,38 @@ export function EventBrowser({ fixed, empty, extraBulk }: Props) {
                 <span className="ml-2 font-normal text-faint">{group.items.length}</span>
               </h2>
             )}
-            <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-              {group.items.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  selecting={selecting}
-                  selected={selected.has(event.id)}
-                  onToggleSelect={() =>
-                    setSelected((prev) => {
-                      const next = new Set(prev)
-                      if (next.has(event.id)) next.delete(event.id)
-                      else next.add(event.id)
-                      return next
-                    })
-                  }
-                  onToggleFavorite={() => toggleFavorite(event)}
-                />
-              ))}
-            </div>
+            {view === 'list' ? (
+              <div className="space-y-2">
+                {group.items.map((event) => (
+                  <EventRow
+                    key={event.id}
+                    event={event}
+                    drive={driveFor(event)}
+                    selecting={selecting}
+                    selected={selected.has(event.id)}
+                    onToggleSelect={() => toggleSelected(event.id)}
+                    onToggleFavorite={() => toggleFavorite(event)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+                {group.items.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    selecting={selecting}
+                    selected={selected.has(event.id)}
+                    onToggleSelect={() => toggleSelected(event.id)}
+                    onToggleFavorite={() => toggleFavorite(event)}
+                  />
+                ))}
+              </div>
+            )}
           </section>
         ))}
         <div ref={sentinel} />
-        {list.isFetchingNextPage && <GridSkeleton count={6} />}
+        {list.isFetchingNextPage && <GridSkeleton count={6} list={view === 'list'} />}
       </div>
 
       {selecting && (
@@ -407,7 +453,22 @@ function FilterSelect({ label, value, onChange, children }: { label: string; val
   )
 }
 
-function GridSkeleton({ count = 12 }: { count?: number }) {
+function GridSkeleton({ count = 12, list = false }: { count?: number; list?: boolean }) {
+  if (list)
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: count }, (_, i) => (
+          <div key={i} className="flex gap-4 rounded-xl border border-line bg-panel p-2.5">
+            <div className="skeleton aspect-video w-32 shrink-0 rounded-lg sm:w-44" />
+            <div className="flex-1 py-1">
+              <div className="skeleton h-3.5 w-1/3 rounded" />
+              <div className="skeleton mt-2.5 h-3 w-1/2 rounded" />
+              <div className="skeleton mt-5 h-4 w-1/4 rounded" />
+            </div>
+          </div>
+        ))}
+      </div>
+    )
   return (
     <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
       {Array.from({ length: count }, (_, i) => (

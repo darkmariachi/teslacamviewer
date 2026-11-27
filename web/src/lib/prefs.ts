@@ -6,6 +6,8 @@ export interface Prefs {
   speedUnit: 'mph' | 'kmh'
   /** Show the car's driving data over the video when the clips have it. */
   hud: boolean
+  /** The home page and collections as a grid of thumbnails or a list with each event's drive. */
+  eventView: 'grid' | 'list'
 }
 
 const KEY = 'teslacam.prefs'
@@ -14,7 +16,7 @@ const KEY = 'teslacam.prefs'
 const defaultUnit = (): Prefs['speedUnit'] => (/-(US|GB|LR|MM)\b/i.test(navigator.language) ? 'mph' : 'kmh')
 
 function load(): Prefs {
-  const base: Prefs = { theme: 'system', speedUnit: defaultUnit(), hud: true }
+  const base: Prefs = { theme: 'system', speedUnit: defaultUnit(), hud: true, eventView: 'grid' }
   try {
     return { ...base, ...(JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Prefs>) }
   } catch {

@@ -26,7 +26,10 @@ export interface EventSummary {
   hasDriveData: boolean
   reason: string | null
   reasonValue: number | null
+  /** The camera the car marked in event.json as seeing the trigger (front, back, left_repeater and so on). */
+  triggerCamera: string | null
   cameras: string[]
+  collectionIds: number[]
   segmentCount: number
   sizeBytes: number
   favorite: boolean
